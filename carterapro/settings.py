@@ -88,13 +88,17 @@ TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
     'DIRS': [BASE_DIR / 'cartera' / 'templates'],
     'APP_DIRS': True,
-    'OPTIONS': {'context_processors': [
-        'django.template.context_processors.debug',
-        'django.template.context_processors.request',
-        'django.contrib.auth.context_processors.auth',
-        'django.contrib.messages.context_processors.messages',
-    ]},
+    'OPTIONS': {
+        'context_processors': [
+            'django.template.context_processors.debug',
+            'django.template.context_processors.request',
+            'django.contrib.auth.context_processors.auth',
+            'django.contrib.messages.context_processors.messages',
+        ],
+        'builtins': ['cartera.templatetags.formatting'],
+    },
 }]
+
 
 WSGI_APPLICATION = 'carterapro.wsgi.application'
 
@@ -150,7 +154,7 @@ USE_TZ = True
 # ---------------- Estáticos y media ----------------
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+#STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Config de STORAGES base (estáticos con WhiteNoise en prod)
 STORAGES = {
