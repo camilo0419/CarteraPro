@@ -1,0 +1,71 @@
+{% load formatting %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Recibo de pago - Factura {{ factura.numero_factura }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;padding:0;background:#FFF7E6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1F1F1F}
+    .wrapper{width:100%;background:#FFF7E6;padding:16px 0}
+    .container{max-width:640px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px}
+    .header{padding:18px 22px;border-bottom:1px solid #E5E5E5}
+    .brand{font-weight:700;font-size:14px;line-height:1.2}
+    .h1{font-size:20px;margin:10px 0 0 0}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #FFE1B3;background:#FFF5E6;color:#F57C00;font-size:12px}
+    .content{padding:20px 22px}
+    .table{width:100%;border-collapse:collapse;margin:8px 0 16px 0;table-layout:fixed}
+    .table .k{width:42%;white-space:nowrap;color:#333}
+    .table td{padding:10px 0;border-top:1px solid #F0F0F0;vertical-align:top}
+    .section td{padding-top:16px;border-top:none;font-weight:700;color:#444}
+    .btn{display:inline-block;padding:12px 18px;background:#C62828;color:#fff !important;text-decoration:none;border-radius:10px;font-weight:700}
+    .footer{padding:16px 22px;border-top:1px solid #E5E5E5;color:#666;font-size:12px}
+    @media (max-width:480px){.content,.header,.footer{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <table width="100%" role="presentation">
+          <tr>
+            <td class="brand">Inversiones<br>Fogón &amp; Leña</td>
+            <td style="text-align:right"><span class="pill">Cartera</span></td>
+          </tr>
+        </table>
+        <h1 class="h1">Recibo de pago – Factura {{ factura.numero_factura }}</h1>
+      </div>
+
+      <div class="content">
+        <p>Hola <strong>{{ proveedor.nombre }}</strong>,</p>
+        <p>Registramos un pago asociado a tu factura. Aquí están los detalles:</p>
+
+        <table class="table" role="presentation">
+          <tr class="section"><td colspan="2">Factura</td></tr>
+          <tr><td class="k"><strong>Factura</strong></td><td>{{ factura.numero_factura }}</td></tr>
+          <tr><td class="k"><strong>Punto de venta</strong></td><td>{{ factura.punto_venta.nombre }}</td></tr>
+          <tr><td class="k"><strong>Fecha de factura</strong></td><td>{{ factura.fecha_factura }}</td></tr>
+          <tr><td class="k"><strong>Valor de la factura</strong></td><td>${{ factura.valor_factura|miles }}</td></tr>
+
+          <tr class="section"><td colspan="2">Pago</td></tr>
+          <tr><td class="k"><strong>Fecha de pago</strong></td><td>{{ pago.fecha_pago }}</td></tr>
+          <tr><td class="k"><strong>Valor pagado</strong></td><td>${{ pago.valor_pagado|miles }}</td></tr>
+          <tr><td class="k"><strong>Pagado por</strong></td><td>{{ pago.pagado_por }}</td></tr>
+
+          <tr class="section"><td colspan="2">Saldo</td></tr>
+          <tr><td class="k"><strong>Saldo restante</strong></td><td>${{ saldo|miles }}</td></tr>
+        </table>
+
+        <p style="margin:18px 0">
+          <a class="btn" href="{{ url_confirmacion }}" target="_blank" rel="noopener">Confirmar recepción del pago</a>
+        </p>
+      </div>
+
+      <div class="footer">
+        Fogón &amp; Leña • Medellín<br>
+        Este mensaje se envió desde Cartera Pro. Por favor no respondas a este correo.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

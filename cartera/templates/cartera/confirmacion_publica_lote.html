@@ -1,0 +1,49 @@
+{% load formatting %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Pago confirmado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;padding:24px;background:#FFF7E6;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#1F1F1F}
+    .card{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+    .header{padding:18px 22px;border-bottom:1px solid #E5E5E5;display:flex;align-items:center;gap:10px}
+    .header .check{width:28px;height:28px;border-radius:6px;background:#e9f7ef;display:grid;place-items:center;color:#2E7D32;font-weight:900}
+    .h1{font-size:22px;margin:0}
+    .content{padding:20px 22px}
+    .muted{color:#666}
+    .list{margin:8px 0 0 20px}
+    .hr{border-top:1px solid #EDEDED;margin:14px 0}
+    .kv{margin:6px 0}
+    @media (max-width:520px){ .content,.header{padding:16px} }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="check">✓</div>
+      <h1 class="h1">Pago confirmado</h1>
+    </div>
+
+    <div class="content">
+      <div class="kv"><b>Proveedor:</b> {{ proveedor.nombre }}</div>
+      <div class="kv"><b>Lote:</b> #{{ lote.id }} — {{ lote.creado|date:"d/m/Y H:i" }}</div>
+      {% if fecha_confirmacion %}
+      <div class="kv muted">Fecha de confirmación: {{ fecha_confirmacion|date:"d/m/Y H:i" }}</div>
+      {% endif %}
+
+      <div class="hr"></div>
+
+      <h3 style="margin:0 0 8px 0;">Facturas incluidas</h3>
+      <ul class="list">
+        {% for f in facturas %}
+          <li>{{ f.numero_factura }} — ${{ f.valor_factura|miles }} — {{ f.punto_venta.nombre }}</li>
+        {% endfor %}
+      </ul>
+
+      <p style="margin-top:16px">¡Gracias!</p>
+    </div>
+  </div>
+</body>
+</html>

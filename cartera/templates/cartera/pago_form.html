@@ -1,0 +1,120 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+
+{% block title %}Registrar Pago{% endblock %}
+
+{% block content %}
+<h1>Registrar pago de factura {{ factura.numero_factura }}</h1>
+
+<div class="table-card" style="padding:16px;margin-top:12px;">
+  <form id="pago-form" method="post" enctype="multipart/form-data" class="js-progress-on-submit" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-warn" style="margin-bottom:10px;">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <style>
+      .pay-grid{display:grid;grid-template-columns:1fr;gap:14px}
+      @media (min-width:720px){.pay-grid{grid-template-columns:1fr 1fr}}
+      .ff{display:flex;flex-direction:column;gap:6px}
+      .ff label{font-weight:600;color:#333}
+      .ff .help{font-size:12px;color:#666}
+      .ff .errors{font-size:12px;color:#c0392b}
+      .ff input[type="text"],
+      .ff input[type="number"],
+      .ff input[type="date"],
+      .ff input[type="file"],
+      .ff select,
+      .ff textarea{
+        padding:10px 12px;border:1px solid var(--border);
+        border-radius:10px;background:#fff;outline:none
+      }
+      .ff input[type="file"]{padding:8px}
+      .ff textarea{min-height:96px;resize:vertical}
+      .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+    </style>
+
+    <div class="pay-grid">
+      <!-- Valor pagado (bloqueado por el form si aplica) -->
+      <div class="ff">
+        <label for="{{ form.valor_pagado.id_for_label }}">Valor pagado</label>
+        {{ form.valor_pagado }}
+        {% if form.valor_pagado.help_text %}<div class="help">{{ form.valor_pagado.help_text }}</div>{% endif %}
+        {% if form.valor_pagado.errors %}<div class="errors">{{ form.valor_pagado.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Fecha de pago -->
+      <div class="ff">
+        <label for="{{ form.fecha_pago.id_for_label }}">Fecha pago</label>
+        {{ form.fecha_pago }}
+        {% if form.fecha_pago.help_text %}<div class="help">{{ form.fecha_pago.help_text }}</div>{% endif %}
+        {% if form.fecha_pago.errors %}<div class="errors">{{ form.fecha_pago.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Pagado por -->
+      <div class="ff">
+        <label for="{{ form.pagado_por.id_for_label }}">Pagado por</label>
+        {{ form.pagado_por }}
+        {% if form.pagado_por.help_text %}<div class="help">{{ form.pagado_por.help_text }}</div>{% endif %}
+        {% if form.pagado_por.errors %}<div class="errors">{{ form.pagado_por.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Comprobante -->
+      <div class="ff">
+        <label for="{{ form.comprobante.id_for_label }}">Comprobante</label>
+        {{ form.comprobante }}
+        <div class="help">PDF o imagen (opcional). Se enviará al proveedor si decides hacerlo luego.</div>
+        {% if form.comprobante.errors %}<div class="errors">{{ form.comprobante.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Notas (ocupa ancho completo) -->
+      <div class="ff" style="grid-column:1 / -1">
+        <label for="{{ form.notas.id_for_label }}">Notas</label>
+        {{ form.notas }}
+        {% if form.notas.help_text %}<div class="help">{{ form.notas.help_text }}</div>{% endif %}
+        {% if form.notas.errors %}<div class="errors">{{ form.notas.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+    <a class="button secondary" href="{% url 'factura_detalle' factura.pk %}">Volver a la factura</a>
+    <button type="submit" class="button warning">Registrar Pago</button>
+  </div>
+
+  </form>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('pago-form');
+  if (!form) return;
+
+  // Hint de tipos aceptados para el comprobante (sin filtros custom)
+  const fileInput = form.querySelector('input[type="file"][name="{{ form.comprobante.name }}"]');
+  if (fileInput) fileInput.setAttribute('accept', '.pdf,image/*');
+
+  form.addEventListener('submit', function (e) {
+    // Validación mínima en front (el backend valida igual)
+    const fecha = form.querySelector('[name="{{ form.fecha_pago.name }}"]');
+    if (fecha && !fecha.value) {
+      e.preventDefault();
+      alert('Por favor ingresa la fecha del pago.');
+      fecha.focus();
+      return false;
+    }
+
+    const numero = "{{ factura.numero_factura|escapejs }}";
+    const proveedor = "{{ factura.proveedor.nombre|escapejs }}";
+    const valor = "{{ factura.valor_factura|floatformat:0|escapejs }}";
+    const msg = `¿Confirmas registrar el pago de la factura ${numero} al proveedor ${proveedor} por $${valor}?`;
+    if (!window.confirm(msg)) {
+      e.preventDefault();
+      return false;
+    }
+  });
+})();
+</script>
+{% endblock %}

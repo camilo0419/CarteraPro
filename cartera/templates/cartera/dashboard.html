@@ -1,0 +1,68 @@
+{% extends "cartera/base.html" %}
+{% load static formatting %}
+
+{% block title %}Resumen{% endblock %}
+
+{% block content %}
+  <h1>Resumen de Cartera</h1>
+
+  <div class="cards">
+    <div class="card">
+      <div class="k">Total general pendiente</div>
+      <div class="v">${{ total_pendiente|miles }}</div>
+    </div>
+
+    <div class="card">
+      <div class="k">Facturas pendientes</div>
+      <div class="v">{{ pendientes_count }}</div>
+    </div>
+
+    <div class="card">
+      <div class="k">Proveedores con saldo</div>
+      <div class="v">{{ proveedores_con_saldo }}</div>
+    </div>
+
+    <div class="card card-actions">
+      <div class="k">Acciones rápidas</div>
+      <div class="row-actions">
+        <a class="button warning" href="{% url 'factura_create' %}">
+          <span>➕</span> Nueva factura
+        </a>
+        <a class="button outline is-full" href="{% url 'facturas_pendientes' %}">
+          <span>📄</span> Facturas pendientes
+        </a>
+        <a class="button outline is-full" href="{% url 'pagos_list' %}">
+          <span>💳</span> Facturas pagadas
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:14px">Saldo por proveedor</h2>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Proveedor</th>
+          <th class="col-count">Facturas</th>
+          <th class="col-money">Total pendiente</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in resumen_por_proveedor %}
+          <tr>
+            <td>
+              <a href="{% url 'facturas_pendientes' %}?prov={{ r.proveedor__id }}">
+                {{ r.proveedor__nombre }}
+              </a>
+            </td>
+            <td class="col-count">{{ r.facturas }}</td>
+            <td class="col-money">${{ r.total|miles }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">Sin pendientes.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

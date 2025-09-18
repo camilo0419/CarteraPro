@@ -1,0 +1,193 @@
+{% extends "cartera/base.html" %}
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block content %}
+<style>
+  /* --- Layout general para el login --- */
+  .auth-wrap{
+    max-width: 1080px;
+    margin: 10px auto 0;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+    align-items: stretch;
+  }
+  .auth-hero{
+    background: #fff;
+    border: 1px solid var(--border, #eee);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.04);
+  }
+  .auth-hero h1{
+    font-size: clamp(22px, 2.2vw, 28px);
+    margin: 4px 0 8px;
+  }
+  .brand-pill{
+    display:inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid #ffd59b;
+    background: #fff3e0;
+    color: #f57c00;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .auth-hero ul{
+    margin: 10px 0 0 18px;
+    line-height: 1.65;
+  }
+  .auth-hero .muted{ color:#666; }
+
+  .auth-card{
+    background: #fff;
+    border: 1px solid var(--border, #eee);
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.04);
+  }
+  .auth-card h2{
+    font-size: 18px;
+    margin: 2px 0 14px;
+  }
+
+  /* --- Form --- */
+  .auth-form p{ margin: 0 0 14px; }
+  .auth-form label{
+    display:block;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .auth-form input[type="text"],
+  .auth-form input[type="password"]{
+    width: 100%;
+    border: 1px solid #d7d7d7;
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 16px;
+    outline: none;
+  }
+  .auth-form input[type="text"]:focus,
+  .auth-form input[type="password"]:focus{
+    background: #fff;
+    border-color: #f7b733;
+    box-shadow: 0 0 0 3px rgba(247,183,51,.2);
+  }
+
+  /* --- Errores --- */
+  .form-errors, .field-errors{
+    background:#fff5f5;
+    border:1px solid #ffd6d6;
+    color:#b30000;
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:12px;
+  }
+  .field-errors{ margin-top:6px; }
+
+  /* --- Acciones --- */
+  .auth-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+  }
+  .btn-primary{
+    display:inline-block;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 18px;
+    background: #f5a300;   /* naranja botón Buscar */
+    color:#000;
+    font-weight: 800;
+    cursor:pointer;
+  }
+  .btn-primary:hover{ filter: brightness(0.98); }
+  .link-soft{
+    color:#444;
+    text-decoration:none;
+    border:1px solid #e6e6e6;
+    background:#fff;
+    padding:10px 14px;
+    border-radius:999px;
+  }
+  .link-soft:hover{ background:#fafafa; }
+
+  /* --- Responsive --- */
+  @media (max-width: 920px){
+    .auth-wrap{ grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="auth-wrap">
+  <!-- Panel de bienvenida -->
+  <section class="auth-hero">
+    <div class="brand-pill">Cartera Pro</div>
+    <h1>Bienvenido 👋</h1>
+    <p class="muted">
+      Inicia sesión para gestionar tus <strong>facturas</strong>, registrar <strong>pagos</strong> y
+      mantener al día la <strong>cartera</strong> de proveedores.
+    </p>
+
+    <ul>
+      <li>Resumen claro de facturas <strong>pendientes</strong> y <strong>pagadas</strong>.</li>
+      <li>Registro de pagos individual o por <strong>lote</strong> con comprobante.</li>
+      <li>Confirmación de pago por correo al proveedor.</li>
+      <li>Interfaz simple, pensada para <strong>tablet y móvil</strong>.</li>
+    </ul>
+
+    <p class="muted" style="margin-top:14px;">
+      ¿Problemas para ingresar? Verifica tu usuario/contraseña o contacta al administrador.
+    </p>
+  </section>
+
+  <!-- Tarjeta de acceso -->
+  <section class="auth-card">
+    <h2>Iniciar sesión</h2>
+
+    {% if form.non_field_errors %}
+      <div class="form-errors">
+        {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+
+      <p>
+        <label for="{{ form.username.id_for_label }}">Nombre de usuario</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="field-errors">
+            {% for err in form.username.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          </div>
+        {% endif %}
+      </p>
+
+      <p>
+        <label for="{{ form.password.id_for_label }}">Contraseña</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+          <div class="field-errors">
+            {% for err in form.password.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          </div>
+        {% endif %}
+      </p>
+
+      <div class="auth-actions">
+        <button type="submit" class="btn-primary">Entrar</button>
+
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  // Accesibilidad: foco en el primer input
+  (function(){
+    const i = document.querySelector('.auth-form input[type="text"], .auth-form input[type="email"]');
+    if (i) i.focus();
+  })();
+</script>
+{% endblock %}

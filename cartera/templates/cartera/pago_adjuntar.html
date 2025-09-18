@@ -1,0 +1,194 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+
+{% block title %}Adjuntar comprobante{% endblock %}
+
+{% block content %}
+<style>
+  .card-narrow { width: min(720px, 96vw); margin: 8px auto 0; }
+  .page-title { text-align: center; margin: 0 0 16px 0; }
+
+  /* ==== Overrides SOLO para tablas de 2 columnas en esta vista ==== */
+  .table-card.table-2col table {
+    table-layout: auto !important;              /* anula el fixed global */
+  }
+  .table-card.table-2col th,
+  .table-card.table-2col td {
+    width: auto !important;                     /* anula 33.33% global */
+    white-space: normal !important;             /* permite envolver texto */
+    text-overflow: clip !important;
+    padding: 10px 12px;                         /* padding consistente */
+    vertical-align: middle;
+    text-align: left;
+  }
+  /* Primera columna angosta → mueve los valores a la izquierda */
+  .table-card.table-2col col:first-child {
+    width: 72px !important;                     /* ajusta este valor a gusto */
+  }
+  .table-card.table-2col td:first-child {
+    padding-right: 6px !important;
+    white-space: nowrap;
+  }
+  .table-card.table-2col td:nth-child(2) {
+    padding-left: 0 !important;
+  }
+
+  .td-wrap { white-space: normal; }
+  .muted { color:#666; }
+
+  /* ===== Comprobante ===== */
+  .file-field { display:block; }
+  .file-field input[type="file"] {
+    display:inline-block;
+    max-width:100%;
+    vertical-align:middle;
+    margin-left:0 !important;
+  }
+  .file-hint {
+    font-size:0.95rem;
+    color:#666;
+    margin-top:6px;
+    line-height:1.25rem;
+    word-break:break-word;
+  }
+
+  /* ===== Acciones ===== */
+  .actions-center {
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-top:16px;
+    flex-wrap:wrap;
+  }
+
+  /* Preview opcional */
+  .preview-box {
+    display:inline-block;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:#fff;
+  }
+  #preview-img {
+    max-width:360px;
+    height:auto;
+    border-radius:10px;
+    display:block;
+    margin:0 auto;
+  }
+
+  /* Responsive */
+  @media (max-width:520px){
+    .table-card.table-2col col:first-child { width: 34vw !important; }
+  }
+</style>
+
+<h2 class="page-title">Adjuntar comprobante</h2>
+
+<!-- Resumen -->
+<div class="table-card table-2col card-narrow" style="margin-bottom:14px;">
+  <table>
+    <colgroup>
+      <col>
+      <col>
+    </colgroup>
+    <tbody>
+      <tr>
+        <td><b>Factura</b></td>
+        <td>{{ pago.factura.numero_factura }}</td>
+      </tr>
+      <tr>
+        <td><b>Proveedor</b></td>
+        <td>{{ pago.factura.proveedor.nombre }}</td>
+      </tr>
+      <tr>
+        <td><b>Indicaciones</b></td>
+        <td class="muted td-wrap">
+          Acepta imágenes (PNG/JPG/JPEG/WEBP) o PDF.
+          No es obligatorio para marcar la factura como pagada, pero es recomendado
+          para respaldo y para el envío al proveedor.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Formulario -->
+<form method="post" enctype="multipart/form-data" class="js-progress-on-submit card-narrow">
+  {% csrf_token %}
+
+  <div class="table-card table-2col" style="margin-bottom:12px;">
+    <table>
+      <colgroup>
+        <col>
+        <col>
+      </colgroup>
+      <tbody>
+        <tr>
+          <td><b>{{ form.comprobante.label }}</b></td>
+          <td>
+            <div class="file-field">
+              {{ form.comprobante }}
+              <div id="file-hint" class="file-hint">Ningún archivo seleccionado.</div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- (Opcional) Vista previa de imagen -->
+        <tr id="preview-row" style="display:none;">
+          <td colspan="2" style="text-align:center;">
+            <div class="preview-box">
+              <img id="preview-img" alt="Vista previa">
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="actions-center">
+    <a class="button secondary" href="{% url 'factura_detalle' pago.factura.pk %}">Volver a la factura</a>
+    <button type="submit" class="button warning">Guardar comprobante</button>
+  </div>
+</form>
+
+<script>
+(function(){
+  const input  = document.querySelector('input[type="file"][name="comprobante"]');
+  const hint   = document.getElementById('file-hint');
+  const row    = document.getElementById('preview-row');
+  const img    = document.getElementById('preview-img');
+  let lastUrl  = null;
+
+  if (!input) return;
+
+  function clearPreview() {
+    if (lastUrl) { URL.revokeObjectURL(lastUrl); lastUrl = null; }
+    if (row) row.style.display = 'none';
+    if (img) img.removeAttribute('src');
+  }
+
+  input.addEventListener('change', () => {
+    clearPreview();
+    const f = input.files && input.files[0];
+    if (!f) { hint && (hint.textContent = 'Ningún archivo seleccionado.'); return; }
+    const type = (f.type || '').toLowerCase();
+
+    if (type.startsWith('image/')) {
+      if (img && row) {
+        lastUrl = URL.createObjectURL(f);
+        img.src = lastUrl;
+        row.style.display = '';
+      }
+      hint && (hint.textContent = `Imagen seleccionada: ${f.name}`);
+      return;
+    }
+    if (type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
+      hint && (hint.textContent = `PDF seleccionado: ${f.name}`);
+      return;
+    }
+    hint && (hint.textContent = `Archivo seleccionado: ${f.name}`);
+  });
+})();
+</script>
+{% endblock %}

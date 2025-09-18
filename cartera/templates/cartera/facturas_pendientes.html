@@ -1,0 +1,226 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+{% load formatting %}
+
+{% block title %}Facturas pendientes{% endblock %}
+
+{% block content %}
+<h1>Facturas pendientes</h1>
+
+<div class="toolbar" style="gap:12px;align-items:center">
+  <!-- Lado izquierdo: panel lote + buscador -->
+  <div class="left" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+
+    <!-- Panel LOTE (solo visible con 2+ seleccionadas) -->
+    <form
+      id="form-lote"
+      method="post"
+      action="{% url 'pago_lote_create' %}"
+      class="js-progress-on-submit"
+      style="display:flex;align-items:center;gap:10px;"
+    >
+      {% csrf_token %}
+      <input type="hidden" name="ids" id="ids-lote">
+
+      <div
+        id="panel-lote"
+        style="
+          display:none;
+          align-items:center;
+          gap:10px;
+          background:#fff3e0;
+          border:1px solid #ffd7a1;
+          border-radius:10px;
+          padding:8px 12px;
+          white-space:nowrap;
+        "
+      >
+        <div><b>Proveedor:</b> <span id="lote-prov">—</span></div>
+        <div><b>Facturas:</b> <span id="lote-cnt">0</span></div>
+        <div><b>Total:</b> $<span id="lote-total">0</span></div>
+        <button id="btn-lote" type="submit" class="button warning">Pagar seleccionadas</button>
+      </div>
+    </form>
+
+    <!-- Buscador (izquierda) -->
+    <form class="search" method="get" action="{% url 'facturas_pendientes' %}">
+      <input
+        id="q-facturas"
+        name="q"
+        type="search"
+        placeholder="Buscar proveedor, punto, número, valor, etc…"
+        value="{{ request.GET.q|default_if_none:'' }}"
+      />
+      <button class="btn" type="submit">Buscar</button>
+    </form>
+  </div>
+
+  <!-- Lado derecho: CTA -->
+  <div class="right">
+    <a class="button warning" href="{% url 'factura_create' %}">➕ Nueva factura</a>
+  </div>
+</div>
+
+<div class="table-card">
+  <table id="tabla-facturas">
+    <thead>
+      <tr>
+        <th class="col-check"></th>
+        <th class="col-date">Fecha</th>
+        <th class="col-num">N.º</th>
+        <th class="col-prov">Proveedor</th>
+        <th class="col-pdv">Punto de venta</th>
+        <th class="col-money">Valor</th>
+        <th class="col-money">Pagado</th>
+        <th class="col-money">Saldo</th>
+        <th class="col-actions">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in facturas %}
+      <tr>
+        <!-- Check solo si aplica -->
+        <td class="col-check">
+          {% if not f.pagos.all|length and f.estado == 'pendiente' %}
+            <input
+              type="checkbox"
+              class="cb-fact"
+              data-proveedor="{{ f.proveedor.id }}"
+              data-proveedor-nombre="{{ f.proveedor.nombre }}"
+              data-numero="{{ f.numero_factura }}"
+              data-saldo="{{ f.saldo|floatformat:0 }}"
+              value="{{ f.id }}"
+            />
+          {% endif %}
+        </td>
+
+        <!-- Fecha: 17/09/2025 -->
+        <td class="col-date" title="{{ f.fecha_factura|date:'d/m/Y' }}">
+          {{ f.fecha_factura|date:"d/m/Y" }}
+        </td>
+
+        <td class="col-num">
+          <a href="{% url 'factura_detalle' f.pk %}" title="Ver detalle">{{ f.numero_factura }}</a>
+        </td>
+
+        <td class="col-prov">{{ f.proveedor.nombre }}</td>
+        <td class="col-pdv">{{ f.punto_venta.nombre }}</td>
+
+        <td class="col-money">${{ f.valor_factura|miles }}</td>
+        <td class="col-money">${{ f.total_pagado|miles }}</td>
+        <td class="col-money">${{ f.saldo|miles }}</td>
+
+        <!-- Acciones visibles -->
+        <td class="col-actions" style="display:flex;gap:8px;justify-content:center;">
+          <a class="icon-btn" href="{% url 'factura_detalle' f.pk %}" aria-label="Ver">👁</a>
+          {% if not f.pagos.all|length and not f.confirmado_pago %}
+            <a class="icon-btn" href="{% url 'pago_create' f.pk %}" aria-label="Registrar pago">💵</a>
+            <a class="icon-btn" href="{% url 'factura_update' f.pk %}" aria-label="Editar factura">✏️</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9">Sin facturas pendientes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+  <div class="pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo; Primero</a>
+      <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+    {% else %}
+      <span>Primero</span><span>Anterior</span>
+    {% endif %}
+
+    <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
+    {% else %}
+      <span>Siguiente</span><span>Último</span>
+    {% endif %}
+  </div>
+{% endif %}
+
+<p><a class="button warning" href="{% url 'dashboard' %}">← Volver al resumen</a></p>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'cartera/app.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const tbl      = document.getElementById('tabla-facturas');
+  const panel    = document.getElementById('panel-lote');
+  const hidden   = document.getElementById('ids-lote');
+  const spanProv = document.getElementById('lote-prov');
+  const spanCnt  = document.getElementById('lote-cnt');
+  const spanTot  = document.getElementById('lote-total');
+
+  function toNumber(v){
+    if (typeof v !== 'string') return Number(v || 0);
+    return Number(v.replace(/[^\d.-]/g,'')) || 0;
+  }
+
+  function updateRowHighlight(){
+    tbl.querySelectorAll('input.cb-fact').forEach(cb => {
+      const tr = cb.closest('tr');
+      if (tr) tr.classList.toggle('row-selected', cb.checked);
+    });
+  }
+
+  function recompute(lastTarget){
+    const cbs = Array.from(tbl.querySelectorAll('input.cb-fact'));
+    const checked = cbs.filter(cb => cb.checked);
+
+    updateRowHighlight();
+
+    // Mostrar panel SOLO si hay 2 o más seleccionadas
+    if (checked.length < 2){
+      panel.style.display = 'none';
+      hidden.value = checked.map(cb => cb.value).join(',');
+      spanProv.textContent = '—';
+      spanCnt.textContent  = '0';
+      spanTot.textContent  = '0';
+      return;
+    }
+
+    // Validar mismo proveedor
+    const provId = checked[0].dataset.proveedor;
+    const provNm = checked[0].dataset.proveedorNombre || '—';
+    let same = true, total = 0;
+
+    checked.forEach(cb => {
+      total += toNumber(cb.dataset.saldo);
+      if (cb.dataset.proveedor !== provId) same = false;
+    });
+
+    if (!same){
+      if (lastTarget && lastTarget.checked) lastTarget.checked = false;
+      alert('Solo puedes seleccionar facturas del MISMO proveedor.');
+      return recompute();
+    }
+
+    // Rellenar panel
+    panel.style.display = 'flex';
+    spanProv.textContent = provNm;
+    spanCnt.textContent  = String(checked.length);
+    spanTot.textContent  = total.toLocaleString('es-CO');
+    hidden.value         = checked.map(cb => cb.value).join(',');
+  }
+
+  tbl.addEventListener('change', (e) => {
+    if (e.target && e.target.classList.contains('cb-fact')) recompute(e.target);
+  });
+  tbl.addEventListener('click', (e) => {
+    if (e.target && e.target.classList.contains('cb-fact')) recompute(e.target);
+  });
+
+  // Estado inicial
+  recompute();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% load formatting %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Recibo de pago - Lote #{{ lote.id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;padding:0;background:#FFF7E6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1F1F1F}
+    .wrapper{width:100%;background:#FFF7E6;padding:16px 0}
+    .container{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px}
+    .header{padding:18px 22px;border-bottom:1px solid #E5E5E5}
+    .brand{font-weight:700;font-size:14px;line-height:1.2}
+    .h1{font-size:20px;margin:10px 0 0 0}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #FFE1B3;background:#FFF5E6;color:#F57C00;font-size:12px}
+    .content{padding:20px 22px}
+    .table{width:100%;border-collapse:collapse;margin:8px 0 16px 0;table-layout:fixed}
+    .table th,.table td{padding:10px 0;border-top:1px solid #F0F0F0;text-align:left}
+    .table th{color:#444}
+    .btn{display:inline-block;padding:12px 18px;background:#C62828;color:#fff !important;text-decoration:none;border-radius:10px;font-weight:700}
+    .footer{padding:16px 22px;border-top:1px solid #E5E5E5;color:#666;font-size:12px}
+    @media (max-width:480px){.content,.header,.footer{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <table width="100%" role="presentation">
+          <tr>
+            <td class="brand">Inversiones<br>Fogón &amp; Leña</td>
+            <td style="text-align:right"><span class="pill">Cartera</span></td>
+          </tr>
+        </table>
+        <h1 class="h1">Recibo de pago – Lote #{{ lote.id }}</h1>
+      </div>
+
+      <div class="content">
+        <p>Hola <strong>{{ proveedor.nombre }}</strong>,</p>
+        <p>Adjuntamos el comprobante del pago por lote. Detalle de facturas incluidas:</p>
+
+        <table class="table" role="presentation">
+          <thead>
+            <tr>
+              <th style="width:40%">Factura</th>
+              <th style="width:35%">Punto de venta</th>
+              <th style="width:25%">Valor</th>
+            </tr>
+          </thead>
+        </table>
+        <table class="table" role="presentation">
+          <tbody>
+            {% for f in facturas %}
+            <tr>
+              <td style="width:40%">{{ f.numero_factura }}</td>
+              <td style="width:35%">{{ f.punto_venta.nombre }}</td>
+              <td style="width:25%">${{ f.valor_factura|miles }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+              <td colspan="2"><strong>Total</strong></td>
+              <td><strong>${{ total|miles }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="margin:18px 0">
+          <a class="btn" href="{{ url_confirmacion }}" target="_blank" rel="noopener">
+            Confirmar recepción del pago de lote
+          </a>
+        </p>
+      </div>
+
+      <div class="footer">
+        Fogón &amp; Leña • Medellín<br>
+        Este mensaje se envió desde Cartera Pro. Por favor no respondas a este correo.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

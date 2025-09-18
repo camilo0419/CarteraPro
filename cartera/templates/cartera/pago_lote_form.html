@@ -1,0 +1,78 @@
+{% extends "cartera/base.html" %}
+{% load formatting %}
+
+{% block title %}Pago por lote{% endblock %}
+
+{% block content %}
+<h2>Pago por lote</h2>
+
+<div class="table-card" style="margin-bottom:14px;">
+  <table>
+    <tbody>
+      <tr><td><b>Proveedor</b></td><td>{{ proveedor.nombre }}</td></tr>
+      <tr><td><b>Facturas seleccionadas</b></td><td>{{ facturas|length }}</td></tr>
+      <tr><td><b>Total</b></td><td>${{ total|miles }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="js-progress-on-submit">
+  {% csrf_token %}
+  <input type="hidden" name="ids" value="{{ ids }}"/>
+
+  <div class="table-card" style="margin-bottom:14px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>N.º</th>
+          <th>PDV</th>
+          <th style="text-align:right;">Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in facturas %}
+        <tr>
+          <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
+          <td>{{ f.numero_factura }}</td>
+          <td>{{ f.punto_venta.nombre }}</td>
+          <td style="text-align:right;">${{ f.valor_factura|miles }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td colspan="3" style="text-align:right;"><b>Total</b></td>
+          <td style="text-align:right;"><b>${{ total|miles }}</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Campos del formulario con estilos unificados -->
+  <div class="form-grid">
+    <div class="form-field">
+      {{ form.fecha_pago.label_tag }}
+      {{ form.fecha_pago }}
+    </div>
+
+    <div class="form-field">
+      {{ form.pagado_por.label_tag }}
+      {{ form.pagado_por }}
+    </div>
+
+    <div class="form-field col-span-2">
+      {{ form.comprobante.label_tag }}
+      {{ form.comprobante }}
+    </div>
+
+    <div class="form-field col-span-2">
+      {{ form.notas.label_tag }}
+      {{ form.notas }}
+    </div>
+  </div>
+
+  <div class="actions-right" style="margin-top:12px;">
+    <a href="{% url 'facturas_pendientes' %}" class="button ghost">Cancelar</a>
+    <button type="submit" class="button warning">Registrar y enviar correo</button>
+  </div>
+</form>
+{% endblock %}

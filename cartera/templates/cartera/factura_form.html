@@ -1,0 +1,112 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+
+{% block title %}{% if view.object %}Editar factura{% else %}Nueva factura{% endif %}{% endblock %}
+
+{% block content %}
+<h1>{% if view.object %}Editar factura{% else %}Nueva factura{% endif %}</h1>
+
+{% if pv_usuario %}
+  <p style="margin-top:-6px;color:#555">
+    <strong>Punto de venta:</strong> {{ pv_usuario.nombre }}
+  </p>
+{% endif %}
+
+<div class="table-card" style="padding:16px;margin-top:12px;">
+  <form method="post" class="js-progress-on-submit" novalidate>
+    {% csrf_token %}
+
+    <!-- Estilos locales mínimos para el form -->
+    <style>
+      .form-grid{
+        display:grid;
+        grid-template-columns: 1fr;
+        gap:14px;
+      }
+      @media (min-width: 720px){
+        .form-grid{ grid-template-columns: 1fr 1fr; }
+      }
+      .form-field{
+        display:flex; flex-direction:column; gap:6px;
+      }
+      .form-field label{
+        font-weight:600; color:#333;
+      }
+      .form-field .help{ font-size:12px; color:#666; }
+      .form-field .errors{ font-size:12px; color:#c0392b; }
+      /* Inputs base */
+      .form-field input[type="text"],
+      .form-field input[type="number"],
+      .form-field input[type="date"],
+      .form-field select,
+      .form-field textarea{
+        padding:10px 12px;
+        border:1px solid var(--border);
+        border-radius:10px;
+        background:#fff;
+        outline:none;
+      }
+      .form-actions{
+        display:flex; gap:10px; align-items:center; margin-top:12px;
+        justify-content:flex-end;
+      }
+    </style>
+
+    <div class="form-grid">
+      <!-- Proveedor -->
+      <div class="form-field">
+        <label for="{{ form.proveedor.id_for_label }}">Proveedor</label>
+        {{ form.proveedor }}
+        {% if form.proveedor.help_text %}<div class="help">{{ form.proveedor.help_text }}</div>{% endif %}
+        {% if form.proveedor.errors %}<div class="errors">{{ form.proveedor.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Punto de venta -->
+      <div class="form-field">
+        <label for="{{ form.punto_venta.id_for_label }}">Punto de venta</label>
+        {{ form.punto_venta }}
+        {% if form.punto_venta.help_text %}<div class="help">{{ form.punto_venta.help_text }}</div>{% endif %}
+        {% if form.punto_venta.errors %}<div class="errors">{{ form.punto_venta.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Número de factura -->
+      <div class="form-field">
+        <label for="{{ form.numero_factura.id_for_label }}">Número factura</label>
+        {{ form.numero_factura }}
+        {% if form.numero_factura.help_text %}<div class="help">{{ form.numero_factura.help_text }}</div>{% endif %}
+        {% if form.numero_factura.errors %}<div class="errors">{{ form.numero_factura.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Fecha -->
+      <div class="form-field">
+        <label for="{{ form.fecha_factura.id_for_label }}">Fecha factura</label>
+        {{ form.fecha_factura }}
+        {% if form.fecha_factura.help_text %}<div class="help">{{ form.fecha_factura.help_text }}</div>{% endif %}
+        {% if form.fecha_factura.errors %}<div class="errors">{{ form.fecha_factura.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Valor -->
+      <div class="form-field">
+        <label for="{{ form.valor_factura.id_for_label }}">Valor factura</label>
+        {{ form.valor_factura }}
+        {% if form.valor_factura.help_text %}<div class="help">{{ form.valor_factura.help_text }}</div>{% endif %}
+        {% if form.valor_factura.errors %}<div class="errors">{{ form.valor_factura.errors }}</div>{% endif %}
+      </div>
+
+      <!-- Estado -->
+      <div class="form-field">
+        <label for="{{ form.estado.id_for_label }}">Estado</label>
+        {{ form.estado }}
+        {% if form.estado.help_text %}<div class="help">{{ form.estado.help_text }}</div>{% endif %}
+        {% if form.estado.errors %}<div class="errors">{{ form.estado.errors }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="{% url 'facturas_pendientes' %}" class="button secondary">Cancelar</a>
+      <button type="submit" class="button primary">Guardar</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

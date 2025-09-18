@@ -1,0 +1,17 @@
+{% load formatting %}
+Hola {{ proveedor.nombre }},
+
+Adjuntamos el comprobante del pago por lote.
+
+Facturas incluidas:
+{% for f in facturas %}
+- {{ f.numero_factura }} — {{ f.punto_venta.nombre }} — ${{ f.valor_factura|miles }}
+{% endfor %}
+
+Total: ${{ total|miles }}
+
+Para confirmar la recepción de este pago, usa este enlace:
+{{ url_confirmacion }}
+
+Gracias,
+Cartera — Fogón & Leña

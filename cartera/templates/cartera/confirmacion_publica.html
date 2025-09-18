@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Pago confirmado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; color: #222; }
+    .card { max-width: 560px; margin: 0 auto; border: 1px solid #e6e6e6; border-radius: 12px; padding: 20px; }
+    h1 { font-size: 22px; margin: 0 0 12px; }
+    .ok { color: #18794e; font-weight: 700; }
+    .row { margin: 8px 0; }
+    .muted { color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="ok">✔ Pago confirmado</h1>
+    <p class="row">Hemos registrado la confirmación de recepción de pago.</p>
+
+    <div class="row"><b>Proveedor:</b> {{ proveedor.nombre }}</div>
+    <div class="row"><b>Factura:</b> {{ numero_factura }}</div>
+    <div class="row"><b>Valor:</b> ${{ valor_factura|floatformat:0 }}</div>
+
+    {% if fecha_confirmacion %}
+    <p class="muted">Fecha de confirmación: {{ fecha_confirmacion|date:"d/m/Y H:i" }}</p>
+    {% endif %}
+
+    <p class="muted">No es necesario responder este mensaje.</p>
+  </div>
+</body>
+</html>

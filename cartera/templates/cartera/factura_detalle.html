@@ -1,0 +1,121 @@
+{% extends "cartera/base.html" %}
+{% load static formatting %}
+
+{% block title %}Factura {{ object.numero_factura }}{% endblock %}
+
+{% block content %}
+<h1>Factura {{ object.numero_factura|upper }}</h1>
+
+<!-- Ficha resumen -->
+<div class="table-card" style="margin-bottom:12px;">
+  <table>
+    <tbody>
+      <tr><td><b>Proveedor</b></td><td>{{ object.proveedor.nombre }}</td></tr>
+      <tr><td><b>Punto de venta</b></td><td>{{ object.punto_venta.nombre }}</td></tr>
+      <tr>
+        <td><b>Fecha</b></td>
+        <td>{{ object.fecha_factura|date:"d/m/Y" }}</td>
+      </tr>
+      <tr>
+        <td><b>Valor</b></td>
+        <td>${{ object.valor_factura|miles }}</td>
+      </tr>
+      <tr>
+        <td><b>Total pagado</b></td>
+        <td>${{ object.total_pagado|miles }}</td>
+      </tr>
+      <tr>
+        <td><b>Saldo</b></td>
+        <td>${{ object.saldo|miles }}</td>
+      </tr>
+      <tr><td><b>Estado</b></td><td>{{ object.get_estado_display }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% if object.confirmado_pago %}
+  <!-- Aviso de confirmación -->
+  <div class="table-card" style="border-left:4px solid #2E7D32;background:#e9f7ef;margin-bottom:12px;">
+    <div style="padding:10px 12px;color:#1b5e20;">
+      ✅ <b>Pago confirmado</b>
+      el {{ object.confirmado_fecha|date:"d/m/Y H:i" }}
+      por {{ object.confirmado_por_email }}
+    </div>
+  </div>
+{% endif %}
+
+<div class="hr"></div>
+
+<h2>Pagos</h2>
+
+{% if object.pagos.all %}
+  <ul style="padding-left:18px;margin:10px 0;">
+    {% for p in object.pagos.all %}
+      <li style="margin-bottom:14px;">
+        {{ p.fecha_pago|date:"d/m/Y" }} — ${{ p.valor_pagado|miles }} — {{ p.pagado_por }}
+
+        {% if p.notas %}
+          <div style="margin-top:4px;color:#555;">
+            <i>{{ p.notas }}</i>
+            {% if "auto-generado" in p.notas|lower %}
+              <span class="badge" style="margin-left:6px;">auto</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if p.lote_id %}
+          <div class="muted" style="margin-top:4px;color:#666;">
+            <em>Pago perteneciente al Lote #{{ p.lote_id }}.</em>
+          </div>
+        {% endif %}
+
+        {% if p.comprobante %}
+          <div style="margin-top:6px;">
+            <a href="{{ p.comprobante.url }}" target="_blank" rel="noopener">Ver comprobante</a>
+          </div>
+
+          {% with name=p.comprobante.name|lower %}
+            {% if ".png" in name or ".jpg" in name or ".jpeg" in name or ".gif" in name or ".webp" in name %}
+              <div style="margin-top:6px;">
+                <img src="{{ p.comprobante.url }}" alt="Comprobante"
+                     style="max-width:360px;height:auto;border:1px solid #ddd;border-radius:8px;">
+              </div>
+            {% endif %}
+          {% endwith %}
+        {% else %}
+          <div style="margin-top:6px;color:#666;">Sin comprobante.</div>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="table-card" style="padding:10px 12px;color:#555;">Sin pagos registrados.</div>
+{% endif %}
+
+<div class="hr"></div>
+
+<!-- Acciones (respetando tus reglas) -->
+<p class="row-actions" style="display:flex;flex-wrap:wrap;gap:8px;">
+  {% if not object.confirmado_pago and object.pagos.all|length == 0 %}
+    <a class="button" href="{% url 'pago_create' object.pk %}">Registrar pago</a>
+    <a class="button secondary" href="{% url 'factura_update' object.pk %}">Editar</a>
+  {% endif %}
+
+  {% with pago=object.pagos.all.0 %}
+    {% if pago and not pago.comprobante %}
+      <a class="button ghost" href="{% url 'pago_adjuntar' pago.pk %}">Adjuntar comprobante</a>
+    {% endif %}
+
+    {% if pago and pago.comprobante and not object.confirmado_pago %}
+      <form class="js-progress-on-submit" action="{% url 'pago_enviar_email' pago.pk %}" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="button secondary">Enviar comprobante por correo</button>
+      </form>
+    {% endif %}
+  {% endwith %}
+</p>
+
+<p style="margin-top:10px;">
+  <a class="button warning" href="{% url 'facturas_pendientes' %}">← Volver</a>
+</p>
+{% endblock %}

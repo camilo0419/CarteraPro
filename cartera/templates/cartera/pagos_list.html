@@ -1,0 +1,90 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+{% load formatting %}
+
+{% block title %}Pagos{% endblock %}
+
+{% block content %}
+<h1>Pagos</h1>
+
+<div class="toolbar">
+  <form class="search" method="get" action="">
+    <input
+      id="q-pagos"
+      name="q"
+      type="search"
+      placeholder="Buscar factura, proveedor, PDV, valor, notas…"
+      value="{{ request.GET.q|default_if_none:'' }}"
+    />
+    <button class="btn" type="submit">Buscar</button>
+  </form>
+</div>
+
+<div class="table-card">
+  <table id="tabla-pagos">
+    <thead>
+      <tr>
+        <th>Punto de venta</th>
+        <th>Fecha</th>
+        <th>Factura</th>
+        <th>Proveedor</th>
+        <th>Valor</th>
+        <th>Pagado por</th>
+        <th>Confirmación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in pagos %}
+      <tr>
+        <td>{{ p.factura.punto_venta.nombre }}</td>
+
+        <!-- Fecha: dd/mm/yyyy -->
+        <td title="{{ p.fecha_pago|date:'d/m/Y' }}">{{ p.fecha_pago|date:"d/m/Y" }}</td>
+
+        <td>
+          <a href="{% url 'factura_detalle' p.factura.pk %}">{{ p.factura.numero_factura }}</a>
+        </td>
+
+        <td>{{ p.factura.proveedor.nombre }}</td>
+        <td>${{ p.valor_pagado|miles }}</td>
+        <td>{{ p.pagado_por }}</td>
+
+        <td>
+          {% if p.factura.confirmado_pago %}
+            <span class="badge ok">Confirmado</span>
+          {% else %}
+            <span class="badge wait">Pendiente</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7">Sin pagos registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page=1">&laquo; Primero</a>
+    <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+  {% else %}
+    <span>Primero</span><span>Anterior</span>
+  {% endif %}
+  <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
+  {% else %}
+    <span>Siguiente</span><span>Último</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<p><a class="button warning" href="{% url 'dashboard' %}">← Volver al resumen</a></p>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'cartera/app.js' %}"></script>
+{% endblock %}

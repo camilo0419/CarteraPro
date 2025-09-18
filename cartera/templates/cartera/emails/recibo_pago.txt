@@ -1,0 +1,22 @@
+{% load formatting %}
+Hola {{ proveedor.nombre }},
+
+Registramos un pago asociado a tu factura.
+
+Factura: {{ factura.numero_factura }}
+Punto de venta: {{ factura.punto_venta.nombre }}
+Fecha de factura: {{ factura.fecha_factura }}
+Valor de la factura: ${{ factura.valor_factura|miles }}
+
+Pago:
+- Fecha de pago: {{ pago.fecha_pago }}
+- Valor pagado: ${{ pago.valor_pagado|miles }}
+- Pagado por: {{ pago.pagado_por }}
+
+Saldo restante: ${{ saldo|miles }}
+
+Para confirmar la recepción de este pago, usa este enlace:
+{{ url_confirmacion }}
+
+Gracias,
+Cartera — Fogón & Leña

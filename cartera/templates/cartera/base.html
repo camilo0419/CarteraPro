@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+  {% load static %}
+  <meta charset="utf-8" />
+  <title>{% block title %}Cartera Pro{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="{% static 'cartera/img/favicon.svg' %}">
+  <link rel="alternate icon" type="image/png" sizes="32x32" href="{% static 'cartera/img/favicon-32.png' %}">
+  <meta name="theme-color" content="#C62828">
+
+  <link rel="stylesheet" href="{% static 'cartera/styles.css' %}">
+</head>
+
+<body>
+  <header style="background:#fff;">
+    <div class="container" style="display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="{% static 'cartera/img/logo2.png' %}" alt="Fogón & Leña"
+             style="height:80px;max-width:320px;object-fit:contain" onerror="this.style.display='none'">
+        <h1 style="margin:0">Cartera Pro</h1>
+      </div>
+
+      <nav style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" aria-label="Navegación principal">
+        <a class="button warning" href="{% url 'dashboard' %}">Resumen</a>
+        <a class="button warning" href="{% url 'facturas_pendientes' %}">Facturas pendientes</a>
+        <a class="button warning" href="{% url 'pagos_list' %}">Facturas pagadas</a>
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="button ghost">❌ Cerrar sesión</button>
+        </form>
+      </nav>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="container" style="display:flex;gap:8px;flex-wrap:wrap;color:#555">
+      <div>Usuario: <strong>{{ request.user.username }}</strong></div>
+      {% if request.user.is_staff %}
+        <div>(Administrador)</div>
+      {% else %}
+        {% with request.user.pv_map.punto_venta as pv %}
+          {% if pv %}
+            <div>| Punto de Venta: <strong>{{ pv.nombre }}</strong></div>
+          {% else %}
+            <div>| <span style="color:#c62828;">Sin Punto de Venta asignado</span></div>
+          {% endif %}
+        {% endwith %}
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Overlay de progreso global -->
+  <div class="progress-overlay" id="progress-overlay">
+    <div class="progress-box">
+      <div>Procesando…</div>
+      <div class="progress-bar"><div></div></div>
+    </div>
+  </div>
+
+  <script src="{% static 'cartera/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+
+
+<footer class="site-footer">
+  <div class="footer-container">
+    <div class="footer-left">
+      <strong>Inversiones Fogón &amp; Leña</strong> • Medellín, Colombia
+    </div>
+    <div class="footer-center">
+        © Todos los derechos reservados
+      </div>
+    <div class="footer-right">
+      <span class="pill">Aplicativo - Cartera Pro</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+.site-footer {
+  background: #FFF7E6; /* crema */
+  border-top: 1px solid #E5E5E5;
+  margin-top: 30px;
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--brand-charcoal, #1F1F1F);
+}
+
+.footer-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.footer-left {
+  margin-bottom: 6px;
+}
+
+.footer-right {
+  font-size: 13px;
+  color: #F57C00;
+}
+
+.footer-right .pill {
+  background: #FFF5E6;
+  border: 1px solid #FFE1B3;
+  color: #F57C00;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+</style>
+
+
+
+</body>
+</html>
