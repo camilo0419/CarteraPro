@@ -8,7 +8,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Favicon -->
-
   <link rel="alternate icon" type="image/png" sizes="32x32" href="{% static 'cartera/img/favicon-32.png' %}">
   <meta name="theme-color" content="#C62828">
 
@@ -24,7 +23,6 @@
         <h1 style="margin:0">Cartera Pro</h1>
       </div>
 
-      {# Navegación: solo si el usuario está autenticado #}
       {% if request.user.is_authenticated %}
         <nav style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" aria-label="Navegación principal">
           <a class="button warning" href="{% url 'dashboard' %}">Resumen</a>
@@ -40,24 +38,18 @@
 
     <div class="hr"></div>
 
-    {# Info de usuario: solo si está autenticado, y cuidando pv_map nulo #}
     {% if request.user.is_authenticated %}
       <div class="container" style="display:flex;gap:8px;flex-wrap:wrap;color:#555">
         <div>Usuario: <strong>{{ request.user.username }}</strong></div>
         {% if request.user.is_staff %}
           <div>(Administrador)</div>
+        {% endif %}
+
+        {% user_pv as pv %}
+        {% if pv %}
+          <div>| Punto de Venta: <strong>{{ pv.nombre }}</strong></div>
         {% else %}
-          {% if request.user.pv_map_id %}
-            {% with pv=request.user.pv_map.punto_venta %}
-              {% if pv %}
-                <div>| Punto de Venta: <strong>{{ pv.nombre }}</strong></div>
-              {% else %}
-                <div>| <span style="color:#c62828;">Sin Punto de Venta asignado</span></div>
-              {% endif %}
-            {% endwith %}
-          {% else %}
-            <div>| <span style="color:#c62828;">Sin Punto de Venta asignado</span></div>
-          {% endif %}
+          <div>| <span style="color:#c62828;">Sin Punto de Venta asignado</span></div>
         {% endif %}
       </div>
     {% endif %}
@@ -102,7 +94,7 @@
 
   <style>
     .site-footer {
-      background: #FFF7E6; /* crema */
+      background: #FFF7E6;
       border-top: 1px solid #E5E5E5;
       margin-top: 30px;
       padding: 14px 20px;
