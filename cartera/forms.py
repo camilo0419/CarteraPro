@@ -157,6 +157,19 @@ class PagoComprobanteForm(forms.ModelForm):
 # ----------------------------
 # Pagos (lote)
 # ----------------------------
+from django import forms
+from django.utils import timezone
+from .models import PuntoVenta, PuntoVentaUsuario, PagoLote
+
+def get_user_pdv(user):
+    if not user or not user.is_authenticated or user.is_staff or user.is_superuser:
+        return None
+    try:
+        return user.pv_map.punto_venta
+    except PuntoVentaUsuario.DoesNotExist:
+        return None
+
+
 class PagoLoteForm(forms.ModelForm):
     pagado_por = forms.ChoiceField(required=True)
 
@@ -175,40 +188,56 @@ class PagoLoteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.user = user
 
-        # 🔹 Preestablecer siempre hoy si no hay valor
+        # Fecha por defecto si no hay valor (solo GET / no-bound)
         if not self.data.get("fecha_pago") and not self.initial.get("fecha_pago"):
-            self.fields["fecha_pago"].initial = timezone.localdate()
+            self.initial["fecha_pago"] = timezone.localdate()
 
-        # STAFF: Oficina + todos los PDV
+        # ---------- Construcción de choices e inicial ----------
         if user and user.is_staff:
-            choices = [("OFICINA", "OFICINA")]
-            for pv in PuntoVenta.objects.order_by("nombre"):
-                etiqueta = f"PDV - {pv.nombre}"
-                choices.append((etiqueta, etiqueta))
+            # STAFF: OFICINA + todos los PDV
+            all_pv = [(f"PDV - {pv.nombre}", f"PDV - {pv.nombre}") for pv in PuntoVenta.objects.order_by("nombre")]
+            base = [("OFICINA", "OFICINA")]
+
+            valor_pdv = None
+            if pdv_default and getattr(pdv_default, "nombre", None):
+                valor_pdv = f"PDV - {pdv_default.nombre}"
+                # asegurarnos que el PDV por defecto aparezca primero
+                all_pv = [opt for opt in all_pv if opt[0] != valor_pdv]
+                choices = [(valor_pdv, valor_pdv)] + base + all_pv
+            else:
+                choices = base + all_pv
+
             self.fields["pagado_por"].choices = choices
-            if pdv_default:
-                self.fields["pagado_por"].initial = f"PDV - {pdv_default.nombre}"
+
+            # Marcar seleccionado SOLO si no está bound (GET)
+            if not self.is_bound and valor_pdv:
+                self.initial["pagado_por"] = valor_pdv
+                self.fields["pagado_por"].initial = valor_pdv
+
         else:
+            # NO STAFF: su PDV + OFICINA
             pv = get_user_pdv(user)
             if pv:
                 etiqueta = f"PDV - {pv.nombre}"
-                self.fields["pagado_por"].choices = [("OFICINA", "OFICINA"), (etiqueta, etiqueta)]
-                self.fields["pagado_por"].initial = etiqueta
+                # PDV primero para que el navegador lo muestre preseleccionado
+                self.fields["pagado_por"].choices = [(etiqueta, etiqueta), ("OFICINA", "OFICINA")]
+                if not self.is_bound:
+                    self.initial["pagado_por"] = etiqueta
+                    self.fields["pagado_por"].initial = etiqueta
             else:
-                self.fields["pagado_por"].choices = []
-                self.fields["pagado_por"].initial = None
+                self.fields["pagado_por"].choices = [("OFICINA", "OFICINA")]
+                if not self.is_bound:
+                    self.initial["pagado_por"] = "OFICINA"
+                    self.fields["pagado_por"].initial = "OFICINA"
 
     def clean_fecha_pago(self):
-        """
-        Garantiza que siempre se guarde la fecha de hoy si el usuario no selecciona nada.
-        """
         fecha = self.cleaned_data.get("fecha_pago")
-        if not fecha:
-            return timezone.localdate()
-        return fecha
+        return fecha or timezone.localdate()
 
     def clean_pagado_por(self):
         seleccionado = self.cleaned_data.get("pagado_por")
+
+        # STAFF: permite OFICINA o cualquier PDV existente
         if self.user and self.user.is_staff:
             if seleccionado == "OFICINA":
                 return seleccionado
@@ -217,6 +246,8 @@ class PagoLoteForm(forms.ModelForm):
                 if PuntoVenta.objects.filter(nombre__iexact=nombre).exists():
                     return seleccionado
             raise forms.ValidationError("Selección inválida de 'Pagado por'.")
+
+        # NO STAFF: solo su PDV o OFICINA
         pv = get_user_pdv(self.user)
         etiqueta_pdv = f"PDV - {pv.nombre}" if pv else None
         if seleccionado == "OFICINA":
@@ -224,3 +255,4 @@ class PagoLoteForm(forms.ModelForm):
         if etiqueta_pdv and seleccionado == etiqueta_pdv:
             return seleccionado
         raise forms.ValidationError("No tiene permiso para registrar pagos a nombre de otro punto.")
+

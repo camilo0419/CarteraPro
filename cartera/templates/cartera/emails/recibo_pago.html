@@ -6,21 +6,54 @@
   <title>Recibo de pago - Factura {{ factura.numero_factura }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    /* Layout base */
     body{margin:0;padding:0;background:#FFF7E6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1F1F1F}
     .wrapper{width:100%;background:#FFF7E6;padding:16px 0}
-    .container{max-width:640px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px}
+    .container{max-width:640px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px;overflow:hidden}
     .header{padding:18px 22px;border-bottom:1px solid #E5E5E5}
     .brand{font-weight:700;font-size:14px;line-height:1.2}
-    .h1{font-size:20px;margin:10px 0 0 0}
+    .h1{font-size:20px;margin:10px 0 0}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #FFE1B3;background:#FFF5E6;color:#F57C00;font-size:12px}
     .content{padding:20px 22px}
-    .table{width:100%;border-collapse:collapse;margin:8px 0 16px 0;table-layout:fixed}
-    .table .k{width:42%;white-space:nowrap;color:#333}
-    .table td{padding:10px 0;border-top:1px solid #F0F0F0;vertical-align:top}
-    .section td{padding-top:16px;border-top:none;font-weight:700;color:#444}
+
+    /* Tarjetas */
+    .cards{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}
+    .card{
+      border:1px solid #EDE7DA;
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .card-h{
+      background:#FFF5E6;
+      border-bottom:1px solid #F0E6D6;
+      padding:10px 14px;
+      font-weight:800;
+      color:#7A4C00;
+    }
+    .card-b{padding:12px 14px}
+    .kv{width:100%;border-collapse:collapse;table-layout:fixed}
+    .kv td{padding:8px 0;border-top:1px solid #F3F3F3;vertical-align:top}
+    .kv tr:first-child td{border-top:none}
+    .kv .k{width:46%;white-space:nowrap;color:#333}
+
+    /* Saldo */
+    .saldo{
+      margin-top:14px;border:1px dashed #E0D2B9;border-radius:12px;padding:12px 14px;background:#FFFCF6
+    }
+    .saldo strong{font-size:15px}
+
+    /* Botón */
     .btn{display:inline-block;padding:12px 18px;background:#C62828;color:#fff !important;text-decoration:none;border-radius:10px;font-weight:700}
+
     .footer{padding:16px 22px;border-top:1px solid #E5E5E5;color:#666;font-size:12px}
-    @media (max-width:480px){.content,.header,.footer{padding:16px}}
+
+    /* Responsive: una columna en móvil */
+    @media (max-width:560px){
+      .col{display:block;width:100% !important;margin-bottom:12px}
+      .content{padding:16px}
+      .header,.footer{padding:16px}
+    }
   </style>
 </head>
 <body>
@@ -40,21 +73,44 @@
         <p>Hola <strong>{{ proveedor.nombre }}</strong>,</p>
         <p>Registramos un pago asociado a tu factura. Aquí están los detalles:</p>
 
-        <table class="table" role="presentation">
-          <tr class="section"><td colspan="2">Factura</td></tr>
-          <tr><td class="k"><strong>Factura</strong></td><td>{{ factura.numero_factura }}</td></tr>
-          <tr><td class="k"><strong>Punto de venta</strong></td><td>{{ factura.punto_venta.nombre }}</td></tr>
-          <tr><td class="k"><strong>Fecha de factura</strong></td><td>{{ factura.fecha_factura }}</td></tr>
-          <tr><td class="k"><strong>Valor de la factura</strong></td><td>${{ factura.valor_factura|miles }}</td></tr>
+        <!-- Tarjetas 2 columnas (Factura | Pago) -->
+        <table class="cards" role="presentation">
+          <tr>
+            <!-- Factura -->
+            <td class="col" width="50%" style="padding-right:8px;">
+              <table class="card" role="presentation" width="100%">
+                <tr><td class="card-h">Factura</td></tr>
+                <tr><td class="card-b">
+                  <table class="kv" role="presentation">
+                    <tr><td class="k"><strong>Factura</strong></td><td>{{ factura.numero_factura }}</td></tr>
+                    <tr><td class="k"><strong>Punto de venta</strong></td><td>{{ factura.punto_venta.nombre }}</td></tr>
+                    <tr><td class="k"><strong>Fecha de factura</strong></td><td>{{ factura.fecha_factura }}</td></tr>
+                    <tr><td class="k"><strong>Valor de la factura</strong></td><td>${{ factura.valor_factura|miles }}</td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </td>
 
-          <tr class="section"><td colspan="2">Pago</td></tr>
-          <tr><td class="k"><strong>Fecha de pago</strong></td><td>{{ pago.fecha_pago }}</td></tr>
-          <tr><td class="k"><strong>Valor pagado</strong></td><td>${{ pago.valor_pagado|miles }}</td></tr>
-          <tr><td class="k"><strong>Pagado por</strong></td><td>{{ pago.pagado_por }}</td></tr>
-
-          <tr class="section"><td colspan="2">Saldo</td></tr>
-          <tr><td class="k"><strong>Saldo restante</strong></td><td>${{ saldo|miles }}</td></tr>
+            <!-- Pago -->
+            <td class="col" width="50%" style="padding-left:8px;">
+              <table class="card" role="presentation" width="100%">
+                <tr><td class="card-h">Pago</td></tr>
+                <tr><td class="card-b">
+                  <table class="kv" role="presentation">
+                    <tr><td class="k"><strong>Fecha de pago</strong></td><td>{{ pago.fecha_pago }}</td></tr>
+                    <tr><td class="k"><strong>Valor pagado</strong></td><td>${{ pago.valor_pagado|miles }}</td></tr>
+                    <tr><td class="k"><strong>Pagado por</strong></td><td>{{ pago.pagado_por }}</td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
         </table>
+
+        <!-- Saldo -->
+        <div class="saldo">
+          <strong>Saldo restante:</strong> ${{ saldo|miles }}
+        </div>
 
         <p style="margin:18px 0">
           <a class="btn" href="{{ url_confirmacion }}" target="_blank" rel="noopener">Confirmar recepción del pago</a>
@@ -64,6 +120,8 @@
       <div class="footer">
         Fogón &amp; Leña • Medellín<br>
         Este mensaje se envió desde Cartera Pro. Por favor no respondas a este correo.
+        Para cualquier duda, contáctanos en el celular +57 318 623 59 29 o al correo
+        <a href="mailto:gerencia@fogonylena.com">cartera@fogonylena.com</a>.
       </div>
     </div>
   </div>

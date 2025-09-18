@@ -8,18 +8,32 @@
   <style>
     body{margin:0;padding:0;background:#FFF7E6;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1F1F1F}
     .wrapper{width:100%;background:#FFF7E6;padding:16px 0}
-    .container{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px}
+    .container{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px;overflow:hidden}
     .header{padding:18px 22px;border-bottom:1px solid #E5E5E5}
     .brand{font-weight:700;font-size:14px;line-height:1.2}
-    .h1{font-size:20px;margin:10px 0 0 0}
+    .h1{font-size:20px;margin:10px 0 0}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #FFE1B3;background:#FFF5E6;color:#F57C00;font-size:12px}
     .content{padding:20px 22px}
-    .table{width:100%;border-collapse:collapse;margin:8px 0 16px 0;table-layout:fixed}
-    .table th,.table td{padding:10px 0;border-top:1px solid #F0F0F0;text-align:left}
-    .table th{color:#444}
+
+    /* Card tabla */
+    .card{border:1px solid #EDE7DA;border-radius:12px;overflow:hidden;margin-top:12px}
+    .card-h{background:#FFF5E6;border-bottom:1px solid #F0E6D6;padding:10px 14px;font-weight:800;color:#7A4C00}
+    .card-b{padding:12px 14px}
+
+    .table{width:100%;border-collapse:collapse;table-layout:fixed}
+    .table th,.table td{padding:10px 6px;border-top:1px solid #F0F0F0;text-align:left}
+    .table th{background:#FAFAFA;color:#444;font-weight:600;border-top:none}
+    .table td strong{color:#000}
+
     .btn{display:inline-block;padding:12px 18px;background:#C62828;color:#fff !important;text-decoration:none;border-radius:10px;font-weight:700}
+    .btn-wrap{text-align:center;margin:26px 0 10px}
+
     .footer{padding:16px 22px;border-top:1px solid #E5E5E5;color:#666;font-size:12px}
-    @media (max-width:480px){.content,.header,.footer{padding:16px}}
+
+    @media (max-width:480px){
+      .content,.header,.footer{padding:16px}
+      .table th,.table td{font-size:14px}
+    }
   </style>
 </head>
 <body>
@@ -39,41 +53,48 @@
         <p>Hola <strong>{{ proveedor.nombre }}</strong>,</p>
         <p>Adjuntamos el comprobante del pago por lote. Detalle de facturas incluidas:</p>
 
-        <table class="table" role="presentation">
-          <thead>
-            <tr>
-              <th style="width:40%">Factura</th>
-              <th style="width:35%">Punto de venta</th>
-              <th style="width:25%">Valor</th>
-            </tr>
-          </thead>
-        </table>
-        <table class="table" role="presentation">
-          <tbody>
-            {% for f in facturas %}
-            <tr>
-              <td style="width:40%">{{ f.numero_factura }}</td>
-              <td style="width:35%">{{ f.punto_venta.nombre }}</td>
-              <td style="width:25%">${{ f.valor_factura|miles }}</td>
-            </tr>
-            {% endfor %}
-            <tr>
-              <td colspan="2"><strong>Total</strong></td>
-              <td><strong>${{ total|miles }}</strong></td>
-            </tr>
-          </tbody>
-        </table>
+        <!-- Tarjeta con tabla -->
+        <div class="card">
+          <div class="card-h">Facturas incluidas</div>
+          <div class="card-b">
+            <table class="table" role="presentation">
+              <thead>
+                <tr>
+                  <th style="width:40%">Factura</th>
+                  <th style="width:35%">Punto de venta</th>
+                  <th style="width:25%">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in facturas %}
+                <tr>
+                  <td>{{ f.numero_factura }}</td>
+                  <td>{{ f.punto_venta.nombre }}</td>
+                  <td>${{ f.valor_factura|miles }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                  <td colspan="2"><strong>Total</strong></td>
+                  <td><strong>${{ total|miles }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <p style="margin:18px 0">
+        <!-- Botón centrado -->
+        <div class="btn-wrap">
           <a class="btn" href="{{ url_confirmacion }}" target="_blank" rel="noopener">
             Confirmar recepción del pago de lote
           </a>
-        </p>
+        </div>
       </div>
 
       <div class="footer">
         Fogón &amp; Leña • Medellín<br>
         Este mensaje se envió desde Cartera Pro. Por favor no respondas a este correo.
+        Para cualquier duda, contáctanos en el celular +57 318 623 59 29 o al correo
+        <a href="mailto:gerencia@fogonylena.com">cartera@fogonylena.com</a>.
       </div>
     </div>
   </div>
