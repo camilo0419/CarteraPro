@@ -109,4 +109,59 @@
   </form>
 </div>
 
+{% block extra_js %}
+<script>
+(function () {
+  const num = document.getElementById('id_numero_factura');
+  const val = document.getElementById('id_valor_factura');
+
+  // ---------- Número de factura: máximo 15 ----------
+  if (num) {
+    num.setAttribute('maxlength', '15');
+    num.addEventListener('input', () => {
+      if (num.value.length > 15) num.value = num.value.slice(0, 15);
+    });
+  }
+
+  // ---------- Valor de factura: máscara de miles + tope 10'000.000 ----------
+  if (val) {
+    const MAX = 10000000;
+    const form = val.closest('form');
+
+    val.setAttribute('type', 'text');
+    val.setAttribute('inputmode', 'numeric');
+    val.setAttribute('autocomplete', 'off');
+
+    const unformat = (s) => (s || '').replace(/\./g, '').replace(/[^\d]/g, '');
+    const formatMiles = (digits) => {
+      digits = String(digits || '').replace(/^0+(?=\d)/, '');
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    val.addEventListener('input', () => {
+      let raw = unformat(val.value);
+      if (raw === '') { val.value = ''; return; }
+
+      let n = parseInt(raw, 10) || 0;
+      if (n > MAX) n = MAX;
+
+      val.value = formatMiles(n);
+    });
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const n = parseInt(unformat(val.value), 10) || 0;
+        if (n > MAX) {
+          e.preventDefault();
+          alert("El valor máximo permitido es 10'000.000.");
+          return false;
+        }
+        val.value = String(n);
+      });
+    }
+  }
+})();
+</script>
+{% endblock %}
+
 {% endblock %}
