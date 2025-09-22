@@ -61,6 +61,33 @@
   </div>
 </div>
 
+<style>
+  /* Ajustes finos de columnas/acciones solo para esta tabla */
+  #tabla-facturas .col-check { width: 44px; text-align:center; }
+  #tabla-facturas .col-date  { width: 120px; text-align:center; }
+  #tabla-facturas .col-num   { width: 120px; text-align:center; }
+  #tabla-facturas .col-prov  { width: auto; }
+  #tabla-facturas .col-pdv   { width: 220px; }
+  #tabla-facturas .col-money { width: 140px; text-align:right; }
+  #tabla-facturas .col-actions { width: 180px; text-align:center; }
+
+  #tabla-facturas td.col-num a { font-weight:600; }
+
+  /* Botones de acción: icono + etiqueta visible en desktop */
+  .icon-actions { display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  .icon-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 10px; border:1px solid var(--border); border-radius:10px;
+    background:#fff; color:#1f1f1f; text-decoration:none;
+  }
+  .icon-btn:hover{ text-decoration:none; filter:brightness(0.98); }
+  .icon-btn .lbl{ display:none; font-size:12px; color:#333; }
+  @media (min-width: 1024px){ .icon-btn .lbl{ display:inline; } }
+
+  /* Centrado vertical lindo */
+  #tabla-facturas tbody td { vertical-align: middle; }
+</style>
+
 <div class="table-card">
   <table id="tabla-facturas">
     <thead>
@@ -71,8 +98,6 @@
         <th class="col-prov">Proveedor</th>
         <th class="col-pdv">Punto de venta</th>
         <th class="col-money">Valor</th>
-        <th class="col-money">Pagado</th>
-        <th class="col-money">Saldo</th>
         <th class="col-actions">Acciones</th>
       </tr>
     </thead>
@@ -90,6 +115,7 @@
               data-numero="{{ f.numero_factura }}"
               data-saldo="{{ f.saldo|floatformat:0 }}"
               value="{{ f.id }}"
+              title="Seleccionar para pago por lote"
             />
           {% endif %}
         </td>
@@ -107,20 +133,26 @@
         <td class="col-pdv">{{ f.punto_venta.nombre }}</td>
 
         <td class="col-money">${{ f.valor_factura|miles }}</td>
-        <td class="col-money">${{ f.total_pagado|miles }}</td>
-        <td class="col-money">${{ f.saldo|miles }}</td>
 
-        <!-- Acciones visibles -->
-        <td class="col-actions" style="display:flex;gap:8px;justify-content:center;">
-          <a class="icon-btn" href="{% url 'factura_detalle' f.pk %}" aria-label="Ver">👁</a>
-          {% if not f.pagos.all|length and not f.confirmado_pago %}
-            <a class="icon-btn" href="{% url 'pago_create' f.pk %}" aria-label="Registrar pago">💵</a>
-            <a class="icon-btn" href="{% url 'factura_update' f.pk %}" aria-label="Editar factura">✏️</a>
-          {% endif %}
+        <!-- Acciones -->
+        <td class="col-actions">
+          <div class="icon-actions">
+            <a class="icon-btn" href="{% url 'factura_detalle' f.pk %}" aria-label="Ver" title="Ver">
+              👁 <span class="lbl"></span>
+            </a>
+            {% if not f.pagos.all|length and not f.confirmado_pago %}
+              <a class="icon-btn" href="{% url 'pago_create' f.pk %}" aria-label="Pagar" title="Registrar pago">
+                💵 <span class="lbl"></span>
+              </a>
+              <a class="icon-btn" href="{% url 'factura_update' f.pk %}" aria-label="Editar" title="Editar factura">
+                ✏️ <span class="lbl"></span>
+              </a>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="9">Sin facturas pendientes.</td></tr>
+      <tr><td colspan="7">Sin facturas pendientes.</td></tr>
       {% endfor %}
     </tbody>
   </table>
