@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Factura, Pago, PuntoVenta, PuntoVentaUsuario, PagoLote
+from .models import Factura, Pago, PuntoVenta, PuntoVentaUsuario, PagoLote, Proveedor
 
 
 def get_user_pdv(user):
@@ -25,7 +25,25 @@ class ISODateInput(forms.DateInput):
 # ----------------------------
 # Facturas
 # ----------------------------
+from django import forms
+from django.utils import timezone
+# Asegúrate de tener importados tus modelos y tu ISODateInput:
+# from .models import Factura, Proveedor, PuntoVenta
+# from .forms_widgets import ISODateInput   # si aplica
+# from .utils import get_user_pdv          # donde lo tengas
+
+class ProveedorChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        correo = (obj.email or "sin correo asignado").strip()
+        return f"{obj.nombre} - {correo}"
+
 class FacturaForm(forms.ModelForm):
+    # ÚNICO CAMBIO: usar el campo con etiqueta personalizada
+    proveedor = ProveedorChoiceField(
+        queryset=Proveedor.objects.all().order_by("nombre"),
+        required=True,
+    )
+
     class Meta:
         model = Factura
         fields = ["proveedor", "punto_venta", "numero_factura", "fecha_factura", "valor_factura", "estado"]
