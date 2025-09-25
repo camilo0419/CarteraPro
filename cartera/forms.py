@@ -25,12 +25,6 @@ class ISODateInput(forms.DateInput):
 # ----------------------------
 # Facturas
 # ----------------------------
-from django import forms
-from django.utils import timezone
-# Asegúrate de tener importados tus modelos y tu ISODateInput:
-# from .models import Factura, Proveedor, PuntoVenta
-# from .forms_widgets import ISODateInput   # si aplica
-# from .utils import get_user_pdv          # donde lo tengas
 
 class ProveedorChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
@@ -175,9 +169,7 @@ class PagoComprobanteForm(forms.ModelForm):
 # ----------------------------
 # Pagos (lote)
 # ----------------------------
-from django import forms
-from django.utils import timezone
-from .models import PuntoVenta, PuntoVentaUsuario, PagoLote
+
 
 def get_user_pdv(user):
     if not user or not user.is_authenticated or user.is_staff or user.is_superuser:
