@@ -16,40 +16,43 @@
   <form method="post" class="js-progress-on-submit" novalidate>
     {% csrf_token %}
 
-    <!-- Estilos locales mínimos para el form -->
     <style>
-      .form-grid{
-        display:grid;
-        grid-template-columns: 1fr;
-        gap:14px;
-      }
-      @media (min-width: 720px){
-        .form-grid{ grid-template-columns: 1fr 1fr; }
-      }
-      .form-field{
-        display:flex; flex-direction:column; gap:6px;
-      }
-      .form-field label{
-        font-weight:600; color:#333;
-      }
+      .form-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+      @media (min-width:720px){ .form-grid{ grid-template-columns:1fr 1fr; } }
+      .form-field{ display:flex; flex-direction:column; gap:6px; }
+      .form-field label{ font-weight:600; color:#333; }
       .form-field .help{ font-size:12px; color:#666; }
       .form-field .errors{ font-size:12px; color:#c0392b; }
-      /* Inputs base */
       .form-field input[type="text"],
       .form-field input[type="number"],
       .form-field input[type="date"],
       .form-field select,
       .form-field textarea{
-        padding:10px 12px;
-        border:1px solid var(--border);
-        border-radius:10px;
-        background:#fff;
-        outline:none;
+        padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; outline:none;
       }
-      .form-actions{
-        display:flex; gap:10px; align-items:center; margin-top:12px;
-        justify-content:flex-end;
+      .form-actions{ display:flex; gap:10px; align-items:center; margin-top:12px; justify-content:flex-end; }
+
+      /* Integración visual Select2 */
+      .select2-container--default .select2-selection--single{
+        height:40px; border:1px solid var(--border); border-radius:10px;
       }
+      .select2-container .select2-selection--single .select2-selection__rendered{
+        line-height:38px; padding-left:10px;
+      }
+      .select2-container--default .select2-selection--single .select2-selection__arrow{
+        height:38px; right:8px;
+      }
+      .select2-results__option .prov-name{ font-weight:700; color:#1f1f1f; }
+      .select2-results__option .prov-mail{ display:block; font-size:12px; color:#666; }
+
+            /* Estilo para las opciones seleccionadas en el select2 */
+      .select2-results__option--highlighted {
+        background-color: #FFE1B3 !important; /* naranja claro */
+        color: #000 !important; /* texto negro para contraste */
+      }
+
+
+
     </style>
 
     <div class="form-grid">
@@ -110,58 +113,108 @@
 </div>
 
 {% block extra_js %}
-<script>
-(function () {
-  const num = document.getElementById('id_numero_factura');
-  const val = document.getElementById('id_valor_factura');
+  {# 1) jQuery (debe ir antes de Select2) #}
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+  {# 2) Select2 CSS + JS #}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  // ---------- Número de factura: máximo 15 ----------
-  if (num) {
-    num.setAttribute('maxlength', '15');
-    num.addEventListener('input', () => {
-      if (num.value.length > 15) num.value = num.value.slice(0, 15);
-    });
-  }
+  <script>
+  (function () {
+    const num = document.getElementById('id_numero_factura');
+    const val = document.getElementById('id_valor_factura');
 
-  // ---------- Valor de factura: máscara de miles + tope 10'000.000 ----------
-  if (val) {
-    const MAX = 10000000;
-    const form = val.closest('form');
-
-    val.setAttribute('type', 'text');
-    val.setAttribute('inputmode', 'numeric');
-    val.setAttribute('autocomplete', 'off');
-
-    const unformat = (s) => (s || '').replace(/\./g, '').replace(/[^\d]/g, '');
-    const formatMiles = (digits) => {
-      digits = String(digits || '').replace(/^0+(?=\d)/, '');
-      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    };
-
-    val.addEventListener('input', () => {
-      let raw = unformat(val.value);
-      if (raw === '') { val.value = ''; return; }
-
-      let n = parseInt(raw, 10) || 0;
-      if (n > MAX) n = MAX;
-
-      val.value = formatMiles(n);
-    });
-
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        const n = parseInt(unformat(val.value), 10) || 0;
-        if (n > MAX) {
-          e.preventDefault();
-          alert("El valor máximo permitido es 10'000.000.");
-          return false;
-        }
-        val.value = String(n);
+    // ---------- Número de factura: máximo 15 ----------
+    if (num) {
+      num.setAttribute('maxlength', '15');
+      num.addEventListener('input', () => {
+        if (num.value.length > 15) num.value = num.value.slice(0, 15);
       });
     }
-  }
-})();
-</script>
+
+    // ---------- Valor de factura: máscara de miles + tope 10'000.000 ----------
+    if (val) {
+      const MAX = 10000000;
+      const form = val.closest('form');
+
+      val.setAttribute('type', 'text');
+      val.setAttribute('inputmode', 'numeric');
+      val.setAttribute('autocomplete', 'off');
+
+      const unformat = (s) => (s || '').replace(/\./g, '').replace(/[^\d]/g, '');
+      const formatMiles = (digits) => {
+        digits = String(digits || '').replace(/^0+(?=\d)/, '');
+        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+
+      val.addEventListener('input', () => {
+        let raw = unformat(val.value);
+        if (raw === '') { val.value = ''; return; }
+        let n = parseInt(raw, 10) || 0;
+        if (n > MAX) n = MAX;
+        val.value = formatMiles(n);
+      });
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          const n = parseInt(unformat(val.value), 10) || 0;
+          if (n > MAX) {
+            e.preventDefault();
+            alert("El valor máximo permitido es 10'000.000.");
+            return false;
+          }
+          val.value = String(n);
+        });
+      }
+    }
+
+    // ---------- Búsqueda dentro del MISMO select de Proveedor (Select2) ----------
+    // Requiere: jQuery y Select2 cargados (vía CDN arriba)
+    function initSelect2Proveedor(){
+      if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+      var $sel = jQuery('#id_proveedor');
+      if (!$sel.length) return;
+
+      $sel.select2({
+        width: '100%',
+        placeholder: 'Selecciona un proveedor',
+        allowClear: false,
+        language: {
+          noResults: function(){ return 'Sin coincidencias'; },
+          searching: function(){ return 'Buscando…'; }
+        },
+        templateResult: function (data) {
+          if (!data.id) return data.text;
+          var txt = data.text || '';
+          var parts = txt.split(' - ');
+          var name = parts[0] || txt;
+          var mail = parts.slice(1).join(' - ') || '';
+          var el = document.createElement('div');
+          el.innerHTML = '<span class="prov-name"></span>' + (mail ? '<span class="prov-mail"></span>' : '');
+          el.querySelector('.prov-name').textContent = name;
+          if (mail) el.querySelector('.prov-mail').textContent = mail;
+          return el;
+        },
+        templateSelection: function (data) {
+          return data.text || data.id;
+        },
+        matcher: function(params, data){
+          if (!params.term || params.term.trim() === '') return data;
+          var term = params.term.toLowerCase();
+          var text = (data.text || '').toLowerCase();
+          return text.indexOf(term) > -1 ? data : null;
+        }
+      });
+    }
+
+    // Inicializa cuando el DOM esté listo y tras confirmar que Select2 existe
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSelect2Proveedor);
+    } else {
+      initSelect2Proveedor();
+    }
+  })();
+  </script>
 {% endblock %}
 
 {% endblock %}
