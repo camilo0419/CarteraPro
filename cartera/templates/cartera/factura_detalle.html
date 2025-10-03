@@ -28,7 +28,15 @@
         <td><b>Saldo</b></td>
         <td>${{ object.saldo|miles }}</td>
       </tr>
-      <tr><td><b>Estado</b></td><td>{{ object.get_estado_display }}</td></tr>
+      <tr>
+        <td><b>Estado</b></td>
+        <td>
+          {{ object.get_estado_display }}
+          {% if es_pago_contado %}
+            <span class="badge ok" style="margin-left:6px;">Pago de contado</span>
+          {% endif %}
+        </td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -106,7 +114,7 @@
       <a class="button ghost" href="{% url 'pago_adjuntar' pago.pk %}">Adjuntar comprobante</a>
     {% endif %}
 
-    {% if pago and pago.comprobante and not object.confirmado_pago %}
+    {% if pago and pago.comprobante and not object.confirmado_pago and not es_pago_contado %}
       <form class="js-progress-on-submit" action="{% url 'pago_enviar_email' pago.pk %}" method="post" style="display:inline;">
         {% csrf_token %}
         <button type="submit" class="button secondary">Enviar comprobante por correo</button>

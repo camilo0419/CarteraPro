@@ -139,6 +139,12 @@ class FacturaPendientesView(LoginRequiredMixin, ListView):
         return ctx
 
 
+def _es_contado_por_notas(pago):
+    """True si el pago parece auto-generado (contado en PDV)."""
+    n = (pago.notas or "").lower()
+    return "auto-generado" in n
+
+# ---------------------- facturas ----------------------
 class FacturaDetalleView(LoginRequiredMixin, DetailView):
     model = Factura
     template_name = 'cartera/factura_detalle.html'
@@ -148,6 +154,15 @@ class FacturaDetalleView(LoginRequiredMixin, DetailView):
         return (Factura.objects
                 .select_related('proveedor', 'punto_venta')
                 .prefetch_related('pagos'))
+
+    # ⬇️ NUEVO: marcamos si alguno de los pagos fue auto (contado)
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        f = self.object
+        es_pago_contado = any(_es_contado_por_notas(p) for p in f.pagos.all())
+        ctx['es_pago_contado'] = es_pago_contado
+        return ctx
+
 
 
 class FacturaUpdateView(LoginRequiredMixin, UpdateView):
@@ -359,6 +374,11 @@ class PagoEnviarEmailView(View):
     def post(self, request, pk):
         pago = Pago.objects.select_related("factura__proveedor").get(pk=pk)
 
+        # ⬇️ CORTAFUEGOS: no enviar correo si es pago de contado
+        if _es_contado_por_notas(pago):
+            messages.info(request, "Pago de contado: no se envía correo de confirmación.")
+            return redirect("factura_detalle", pk=pago.factura.id)
+
         if not (pago.comprobante and pago.comprobante.name):
             messages.error(request, "Este pago no tiene comprobante adjunto.")
             return redirect("factura_detalle", pk=pago.factura.id)
@@ -373,7 +393,6 @@ class PagoEnviarEmailView(View):
             messages.error(request, f"Error al enviar correo: {e}")
 
         return redirect("factura_detalle", pk=pago.factura.id)
-
 
 # ------------------ confirmación proveedor (individual) ------------------
 class ConfirmarPagoView(View):

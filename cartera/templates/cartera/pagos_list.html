@@ -50,12 +50,15 @@
         <td>{{ p.pagado_por }}</td>
 
         <td>
-          {% if p.factura.confirmado_pago %}
+          {% if "auto-generado" in p.notas|lower %}
+            <span class="badge warn">Pago de contado</span>
+          {% elif p.factura.confirmado_pago %}
             <span class="badge ok">Confirmado</span>
           {% else %}
             <span class="badge wait">Pendiente</span>
           {% endif %}
         </td>
+
       </tr>
       {% empty %}
       <tr><td colspan="7">Sin pagos registrados.</td></tr>
