@@ -369,4 +369,70 @@ th.col-money, td.col-money{ text-align:right; width:220px; }
 .footer-left { text-align: left; }
 .footer-right { text-align: right; }
 
+/* ====== Filtros Analítica — barra horizontal (Grid) ====== */
+/* ===== Filtros Analítica (limpio, sin superposiciones) ===== */
+.filters{
+  display:flex;
+  flex-wrap:wrap;                 /* una fila; si no cabe, salta */
+  align-items:flex-end;
+  gap:12px 16px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;
+  box-shadow:0 1px 8px rgba(0,0,0,.04);
+  margin:10px 0 14px;
+}
 
+.filters .field{
+  display:flex;
+  align-items:center;             /* label + control en línea */
+  gap:8px;
+}
+
+.filters .field label{
+  margin:0;
+  font-weight:700;
+  color:var(--brand-charcoal);
+  white-space:nowrap;
+  font-size:14px;
+}
+
+.filters .field select,
+.filters .field input[type="date"]{
+  height:36px;
+  padding:6px 8px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+  outline:0;
+  font-size:14px;
+}
+
+.filters .field input[type="date"]{
+  width:140px;            /* controla el ancho del date */
+  max-width:140px;
+}
+
+.filters .field select{
+  min-width:170px;
+}
+
+/* Botones a la derecha */
+.filters .actions{
+  margin-left:auto;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .filters{ gap:10px 12px; }
+  .filters .field input[type="date"]{ width:130px; max-width:130px; }
+}
+@media (max-width: 560px){
+  .filters{ flex-direction:column; align-items:stretch; }
+  .filters .actions{ margin-left:0; justify-content:stretch; }
+  .filters .actions .button{ flex:1; }
+}

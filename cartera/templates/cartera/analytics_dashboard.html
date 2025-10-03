@@ -1,0 +1,323 @@
+{% extends "cartera/base.html" %}
+{% load static %}
+
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<h1 style="display:flex;align-items:center;gap:10px">
+  📊 Tablero Analítico
+  <span class="badge">CarteraPro</span>
+</h1>
+
+<!-- ===== Filtros (auto-aplican) ===== -->
+<form method="get" class="filters">
+  <div class="field">
+    <label for="f-pdv">Punto de venta</label>
+    <select id="f-pdv" name="pdv">
+      <option value="">Todos</option>
+      {% for p in pdvs %}
+        <option value="{{ p.id }}" {% if filters.pdv == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="f-prov">Proveedor</label>
+    <select id="f-prov" name="prov">
+      <option value="">Todos</option>
+      {% for p in provs %}
+        <option value="{{ p.id }}" {% if filters.prov == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="f-rango">Rango</label>
+    <select id="f-rango" name="rango">
+      <option value="mes_actual">Mes actual</option>
+      <option value="mes_anterior">Mes anterior</option>
+      <option value="ult_30">Últimos 30 días</option>
+      <option value="este_anio">Este año</option>
+      <option value="anio_pasado">Año pasado</option>
+      <option value="personalizado">Personalizado</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="f-d1">Desde</label>
+    <input id="f-d1" type="date" name="d1" value="{{ filters.d1 }}">
+  </div>
+
+  <div class="field">
+    <label for="f-d2">Hasta</label>
+    <input id="f-d2" type="date" name="d2" value="{{ filters.d2 }}">
+  </div>
+
+  <div class="actions">
+    <a class="button outline" href="{% url 'analytics_dashboard' %}">Limpiar</a>
+  </div>
+</form>
+
+<!-- ===== KPIs ===== -->
+<div class="cards">
+  <div class="card">
+    <div class="k">Total compras</div>
+    <div class="v">
+      $<span class="money-es" data-v="{{ kpi_total|floatformat:0 }}">{{ kpi_total|floatformat:0 }}</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="k">Facturas</div>
+    <div class="v">{{ kpi_facturas }}</div>
+  </div>
+  <div class="card">
+    <div class="k">Pagado</div>
+    <div class="v">
+      $<span class="money-es" data-v="{{ kpi_pagado|floatformat:0 }}">{{ kpi_pagado|floatformat:0 }}</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="k">Prom. días pago</div>
+    <div class="v">{{ kpi_dias }}</div>
+  </div>
+</div>
+
+<!-- ===== Gráficas ===== -->
+<div class="table-card" style="padding:14px; margin-top:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <b>Top Proveedores</b>
+    <small style="color:var(--muted)">clic para filtrar por proveedor</small>
+  </div>
+  <canvas id="topProveedores" height="130"></canvas>
+</div>
+
+<div class="table-card" style="padding:14px; margin-top:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <b>Compras por PDV</b>
+    <small style="color:var(--muted)">clic para filtrar por PDV</small>
+  </div>
+  <canvas id="comprasPorPDV" height="160"></canvas>
+</div>
+
+<div class="table-card" style="padding:14px; margin-top:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <b>Compras por Mes</b>
+    <small style="color:var(--muted)">clic en el mes para aplicar rango</small>
+  </div>
+  <canvas id="comprasMensuales" height="120"></canvas>
+</div>
+
+<!-- ===== Top facturas ===== -->
+<div class="table-card" style="padding:14px; margin-top:16px;">
+  <h2>Top Facturas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>N.º</th>
+        <th>Proveedor</th>
+        <th>PDV</th>
+        <th class="col-money">Valor</th>
+        <th style="text-align:center;">Detalle</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in top_facturas %}
+      <tr>
+        <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
+        <td>{{ f.numero_factura }}</td>
+        <td>{{ f.proveedor__nombre }}</td>
+        <td>{{ f.punto_venta__nombre }}</td>
+        <td class="col-money">
+          $<span class="money-es" data-v="{{ f.valor_factura|floatformat:0 }}">{{ f.valor_factura|floatformat:0 }}</span>
+        </td>
+        <td style="text-align:center;">
+          <a class="icon-btn"
+             href="{% url 'factura_detalle' f.id %}?next={{ request.get_full_path|urlencode }}"
+             title="Ver factura">👁</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">No hay datos para los filtros seleccionados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const NARANJA = 'rgba(245, 124, 0, 0.9)';
+const NARANJA_SUAVE = 'rgba(255, 193, 112, .8)';
+const AZUL = 'rgba(37, 99, 235, 0.9)';
+
+function $(id){ return document.getElementById(id); }
+
+function go(patch){
+  const url = new URL(window.location.href);
+  for (const [k,v] of Object.entries(patch)){
+    if (v === '' || v === null || v === undefined) url.searchParams.delete(k);
+    else url.searchParams.set(k, v);
+  }
+  window.location.replace(url.toString());
+}
+
+/* ====== Dinámica de filtros ====== */
+(function setupFilters(){
+  const params = new URLSearchParams(location.search);
+
+  // Mantener rango seleccionado tras recarga
+  const rangoSel = $('f-rango');
+  rangoSel.value = params.get('rango') || 'personalizado';
+
+  // Auto aplicar al cambiar PDV/Proveedor
+  $('f-pdv').addEventListener('change', e => go({ pdv: e.target.value || null }));
+  $('f-prov').addEventListener('change', e => go({ prov: e.target.value || null }));
+
+  // Presets de rango -> calculan d1/d2 y aplican
+  rangoSel.addEventListener('change', e => {
+    const r = e.target.value;
+    if (r === 'personalizado') return; // el usuario editará fechas manualmente
+    const { d1, d2 } = rangeDates(r);
+    go({ rango: r, d1, d2 });
+  });
+
+  // Al elegir la segunda fecha (Hasta), aplicar con rango=personalizado
+  $('f-d2').addEventListener('change', () => {
+    const d1 = $('f-d1').value, d2 = $('f-d2').value;
+    if (d1 && d2) go({ rango: 'personalizado', d1, d2 });
+  });
+
+  // Ajustar min/max para evitar rangos inválidos
+  const syncBounds = () => {
+    $('f-d2').min = $('f-d1').value || '';
+    $('f-d1').max = $('f-d2').value || '';
+  };
+  $('f-d1').addEventListener('change', syncBounds);
+  $('f-d2').addEventListener('change', syncBounds);
+  syncBounds();
+})();
+
+// Util: fechas a ISO (YYYY-MM-DD)
+function iso(y,m,d){ return new Date(y, m, d).toISOString().slice(0,10); }
+function today(){
+  const t=new Date(); return iso(t.getFullYear(), t.getMonth(), t.getDate());
+}
+function firstOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth(), 1); }
+function lastOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth()+1, 0); }
+function addDays(dt, n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
+
+// Calcula d1/d2 para cada preset
+function rangeDates(key){
+  const now = new Date();
+  switch(key){
+    case 'mes_actual':
+      return { d1: firstOfMonth(now), d2: today() };
+    case 'mes_anterior': {
+      const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      return { d1: firstOfMonth(prev), d2: lastOfMonth(prev) };
+    }
+    case 'ult_30': {            // ✅ Ajuste: cálculo limpio de 30 días
+      const end = new Date();
+      const start = addDays(end, -29);
+      return { d1: start.toISOString().slice(0,10), d2: end.toISOString().slice(0,10) };
+    }
+    case 'este_anio':
+      return { d1: iso(now.getFullYear(), 0, 1), d2: today() };
+    case 'anio_pasado':
+      return { d1: iso(now.getFullYear()-1, 0, 1), d2: iso(now.getFullYear()-1, 11, 31) };
+    default:
+      return { d1: $('f-d1').value, d2: $('f-d2').value };
+  }
+}
+
+/* ====== Formato pesos (puntos de mil) ====== */
+function formatMoneyES() {
+  document.querySelectorAll('.money-es').forEach(el => {
+    const raw = el.getAttribute('data-v') || el.textContent;
+    const n = Number(String(raw).replace(/[^\d.-]/g,''));
+    if (!isNaN(n)) el.textContent = n.toLocaleString('es-CO');
+  });
+}
+document.addEventListener('DOMContentLoaded', formatMoneyES);
+
+/* ==== Datos desde Django ==== */
+const TOP_PROV = JSON.parse('{{ top_prov_json|escapejs }}');
+const POR_PDV  = JSON.parse('{{ por_pdv_json|escapejs }}');
+const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
+
+/* ==== Top proveedores (clic -> prov=ID) ==== */
+if (TOP_PROV.length) {
+  new Chart($('topProveedores'), {
+    type: 'bar',
+    data: {
+      labels: TOP_PROV.map(x => x.nombre),
+      datasets: [{ data: TOP_PROV.map(x => x.total), backgroundColor: NARANJA }]
+    },
+    options: {
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => '$' + (ctx.parsed.y||0).toLocaleString('es-CO')
+      }}},
+      scales:{ y:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
+      onClick: (evt, els) => {
+        if (!els || !els.length) return;
+        const idx = els[0].index;
+        const provId = TOP_PROV[idx].id;
+        go({ prov: provId });
+      }
+    }
+  });
+}
+
+/* ==== Compras por PDV (clic -> pdv=ID) ==== */
+if (POR_PDV.length) {
+  new Chart($('comprasPorPDV'), {
+    type: 'bar',
+    data: {
+      labels: POR_PDV.map(x => x.nombre),
+      datasets: [{ data: POR_PDV.map(x => x.total), backgroundColor: NARANJA_SUAVE, borderColor:NARANJA, borderWidth:2 }]
+    },
+    options: {
+      indexAxis:'y',
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => '$' + (ctx.parsed.x||0).toLocaleString('es-CO')
+      }}},
+      scales:{ x:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
+      onClick: (evt, els) => {
+        if (!els || !els.length) return;
+        const idx = els[0].index;
+        const pdvId = POR_PDV[idx].id;
+        go({ pdv: pdvId });
+      }
+    }
+  });
+}
+
+/* ==== Compras mensuales (clic -> d1/d2 del mes) ==== */
+if (BY_MONTH.length) {
+  new Chart($('comprasMensuales'), {
+    type: 'line',
+    data:{
+      labels: BY_MONTH.map(x => new Date(x.m).toLocaleDateString('es-CO',{month:'short',year:'2-digit'})),
+      datasets:[{ data: BY_MONTH.map(x => x.total), borderColor: AZUL, backgroundColor:'rgba(37,99,235,.12)', fill:true, tension:.3 }]
+    },
+    options:{
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => '$' + (ctx.parsed.y||0).toLocaleString('es-CO')
+      }}},
+      scales:{ y:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
+      onClick: (evt, els) => {
+        if (!els || !els.length) return;
+        const idx = els[0].index;
+        const first = new Date(BY_MONTH[idx].m);
+        const d1 = first.toISOString().slice(0,10);
+        const last = new Date(first.getFullYear(), first.getMonth()+1, 0);
+        const d2 = last.toISOString().slice(0,10);
+        go({ rango: 'personalizado', d1, d2 });
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

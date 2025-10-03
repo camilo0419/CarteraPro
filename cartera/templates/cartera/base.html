@@ -11,7 +11,8 @@
   <link rel="alternate icon" type="image/png" sizes="32x32" href="{% static 'cartera/img/favicon-32.png' %}">
   <meta name="theme-color" content="#C62828">
 
-  <link rel="stylesheet" href="{% static 'cartera/styles.css' %}">
+<link rel="stylesheet" href="{% static 'cartera/styles.css' %}?v=20251002">
+
 </head>
 
 <body>
@@ -24,10 +25,15 @@
       </div>
 
       {% if request.user.is_authenticated %}
-        <nav style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" aria-label="Navegación principal">
-          <a class="button warning" href="{% url 'dashboard' %}">Resumen</a>
-          <a class="button warning" href="{% url 'facturas_pendientes' %}">Facturas pendientes</a>
-          <a class="button warning" href="{% url 'pagos_list' %}">Facturas pagadas</a>
+              <nav style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" aria-label="Navegación principal">
+                {% if request.user.is_staff %}
+        <a class="button warning" href="{% url 'analytics_dashboard' %}">📊 Analítica</a>
+      {% endif %}
+
+      <a class="button warning" href="{% url 'dashboard' %}">Resumen</a>
+      <a class="button warning" href="{% url 'facturas_pendientes' %}">Facturas pendientes</a>
+      <a class="button warning" href="{% url 'pagos_list' %}">Facturas pagadas</a>
+
           <form action="{% url 'logout' %}" method="post" style="display:inline;">
             {% csrf_token %}
             <button type="submit" class="button ghost">❌ Cerrar sesión</button>

@@ -2,6 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 
+
+
 router = DefaultRouter()
 router.register(r'api/proveedores', views.ProveedorViewSet, basename='proveedor')
 router.register(r'api/facturas', views.FacturaViewSet, basename='factura')
@@ -34,5 +36,8 @@ urlpatterns = [
 
     # urls.py (agrega esta línea en urlpatterns, sección Pagos)
     path("pagos/<int:pk>/adjuntar/", views.PagoAdjuntarComprobanteView.as_view(), name="pago_adjuntar"),
+
+    # Dashboard de analítica
+    path("analitica/", views.analytics_dashboard, name="analytics_dashboard"),
 
 ]
