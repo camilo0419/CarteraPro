@@ -4,151 +4,159 @@
 {% block title %}Analytics{% endblock %}
 
 {% block content %}
-<h1 style="display:flex;align-items:center;gap:10px">
-  📊 Tablero Analítico
-  <span class="badge">CarteraPro</span>
-</h1>
+<div class="analytics-scope"><!-- ⬅️ wrapper para aislar estilos -->
 
-<!-- ===== Filtros (auto-aplican) ===== -->
-<form method="get" class="filters">
-  <div class="field">
-    <label for="f-pdv">Punto de venta</label>
-    <select id="f-pdv" name="pdv">
-      <option value="">Todos</option>
-      {% for p in pdvs %}
-        <option value="{{ p.id }}" {% if filters.pdv == p.id %}selected{% endif %}>{{ p.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  <h1 style="display:flex;align-items:center;gap:10px">
+    📊 Tablero Analítico
+    <span class="badge">CarteraPro</span>
+  </h1>
 
-  <div class="field">
-    <label for="f-prov">Proveedor</label>
-    <select id="f-prov" name="prov">
-      <option value="">Todos</option>
-      {% for p in provs %}
-        <option value="{{ p.id }}" {% if filters.prov == p.id %}selected{% endif %}>{{ p.nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
+  <!-- ===== Filtros (auto-aplican) ===== -->
+  <form method="get" class="filters">
+    <div class="field">
+      <label for="f-pdv">Punto de venta</label>
+      <select id="f-pdv" name="pdv">
+        <option value="">Todos</option>
+        {% for p in pdvs %}
+          <option value="{{ p.id }}" {% if filters.pdv == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <div class="field">
-    <label for="f-rango">Rango</label>
-    <select id="f-rango" name="rango">
-      <option value="mes_actual">Mes actual</option>
-      <option value="mes_anterior">Mes anterior</option>
-      <option value="ult_30">Últimos 30 días</option>
-      <option value="este_anio">Este año</option>
-      <option value="anio_pasado">Año pasado</option>
-      <option value="personalizado">Personalizado</option>
-    </select>
-  </div>
+    <div class="field">
+      <label for="f-prov">Proveedor</label>
+      <select id="f-prov" name="prov">
+        <option value="">Todos</option>
+        {% for p in provs %}
+          <option value="{{ p.id }}" {% if filters.prov == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <div class="field">
-    <label for="f-d1">Desde</label>
-    <input id="f-d1" type="date" name="d1" value="{{ filters.d1 }}">
-  </div>
+    <div class="field">
+      <label for="f-rango">Rango</label>
+      <select id="f-rango" name="rango">
+        <option value="mes_actual">Mes actual</option>
+        <option value="mes_anterior">Mes anterior</option>
+        <option value="ult_30">Últimos 30 días</option>
+        <option value="este_anio">Este año</option>
+        <option value="anio_pasado">Año pasado</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
+    </div>
 
-  <div class="field">
-    <label for="f-d2">Hasta</label>
-    <input id="f-d2" type="date" name="d2" value="{{ filters.d2 }}">
-  </div>
+    <div class="field">
+      <label for="f-d1">Desde</label>
+      <input id="f-d1" type="date" name="d1" value="{{ filters.d1 }}">
+    </div>
 
-  <div class="actions">
-    <a class="button outline" href="{% url 'analytics_dashboard' %}">Limpiar</a>
-  </div>
-</form>
+    <div class="field">
+      <label for="f-d2">Hasta</label>
+      <input id="f-d2" type="date" name="d2" value="{{ filters.d2 }}">
+    </div>
 
-<!-- ===== KPIs ===== -->
-<div class="cards">
-  <div class="card">
-    <div class="k">Total compras</div>
-    <div class="v">
-      $<span class="money-es" data-v="{{ kpi_total|floatformat:0 }}">{{ kpi_total|floatformat:0 }}</span>
+    <div class="actions">
+      <a class="button outline" href="{% url 'analytics_dashboard' %}">Limpiar</a>
+    </div>
+  </form>
+
+  <!-- ===== KPIs ===== -->
+  <div class="cards">
+    <div class="card">
+      <div class="k">Total compras</div>
+      <div class="v">
+        $<span class="money-es" data-v="{{ kpi_total|floatformat:0 }}">{{ kpi_total|floatformat:0 }}</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="k">Facturas</div>
+      <div class="v">{{ kpi_facturas }}</div>
+    </div>
+    <div class="card">
+      <div class="k">Pagado</div>
+      <div class="v">
+        $<span class="money-es" data-v="{{ kpi_pagado|floatformat:0 }}">{{ kpi_pagado|floatformat:0 }}</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="k">Prom. días pago</div>
+      <div class="v">{{ kpi_dias }}</div>
     </div>
   </div>
-  <div class="card">
-    <div class="k">Facturas</div>
-    <div class="v">{{ kpi_facturas }}</div>
-  </div>
-  <div class="card">
-    <div class="k">Pagado</div>
-    <div class="v">
-      $<span class="money-es" data-v="{{ kpi_pagado|floatformat:0 }}">{{ kpi_pagado|floatformat:0 }}</span>
+
+  <!-- ===== Gráficas ===== -->
+  <div class="table-card" style="padding:14px; margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <b>Top Proveedores</b>
+      <small style="color:var(--muted)">clic para filtrar por proveedor</small>
     </div>
+    <canvas id="topProveedores"></canvas>
   </div>
-  <div class="card">
-    <div class="k">Prom. días pago</div>
-    <div class="v">{{ kpi_dias }}</div>
-  </div>
-</div>
 
-<!-- ===== Gráficas ===== -->
-<div class="table-card" style="padding:14px; margin-top:16px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <b>Top Proveedores</b>
-    <small style="color:var(--muted)">clic para filtrar por proveedor</small>
+  <div class="table-card" style="padding:14px; margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <b>Compras por PDV</b>
+      <small style="color:var(--muted)">clic para filtrar por PDV</small>
+    </div>
+    <canvas id="comprasPorPDV" height="160"></canvas>
   </div>
-  <!-- sin altura fija: la calculamos en JS para móvil -->
-  <canvas id="topProveedores"></canvas>
-</div>
 
-<div class="table-card" style="padding:14px; margin-top:16px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <b>Compras por PDV</b>
-    <small style="color:var(--muted)">clic para filtrar por PDV</small>
+  <div class="table-card" style="padding:14px; margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <b>Compras por Mes</b>
+      <small style="color:var(--muted)">clic en el mes para aplicar rango</small>
+    </div>
+    <canvas id="comprasMensuales" height="120"></canvas>
   </div>
-  <canvas id="comprasPorPDV" height="160"></canvas>
-</div>
 
-<div class="table-card" style="padding:14px; margin-top:16px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <b>Compras por Mes</b>
-    <small style="color:var(--muted)">clic en el mes para aplicar rango</small>
+  <!-- ===== Top facturas ===== -->
+  <div class="table-card" style="padding:14px; margin-top:16px;">
+    <h2>Top Facturas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>N.º</th>
+          <th>Proveedor</th>
+          <th>PDV</th>
+          <th class="col-money">Valor</th>
+          <th style="text-align:center;">Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in top_facturas %}
+        <tr>
+          <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
+          <td>{{ f.numero_factura }}</td>
+          <td>{{ f.proveedor__nombre }}</td>
+          <td>{{ f.punto_venta__nombre }}</td>
+          <td class="col-money">
+            $<span class="money-es" data-v="{{ f.valor_factura|floatformat:0 }}">{{ f.valor_factura|floatformat:0 }}</span>
+          </td>
+          <td style="text-align:center;">
+            <a class="icon-btn"
+               href="{% url 'factura_detalle' f.id %}?next={{ request.get_full_path|urlencode }}"
+               title="Ver factura">👁</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No hay datos para los filtros seleccionados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  <canvas id="comprasMensuales" height="120"></canvas>
-</div>
 
-<!-- ===== Top facturas ===== -->
-<div class="table-card" style="padding:14px; margin-top:16px;">
-  <h2>Top Facturas</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>N.º</th>
-        <th>Proveedor</th>
-        <th>PDV</th>
-        <th class="col-money">Valor</th>
-        <th style="text-align:center;">Detalle</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for f in top_facturas %}
-      <tr>
-        <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
-        <td>{{ f.numero_factura }}</td>
-        <td>{{ f.proveedor__nombre }}</td>
-        <td>{{ f.punto_venta__nombre }}</td>
-        <td class="col-money">
-          $<span class="money-es" data-v="{{ f.valor_factura|floatformat:0 }}">{{ f.valor_factura|floatformat:0 }}</span>
-        </td>
-        <td style="text-align:center;">
-          <a class="icon-btn"
-             href="{% url 'factura_detalle' f.id %}?next={{ request.get_full_path|urlencode }}"
-             title="Ver factura">👁</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6">No hay datos para los filtros seleccionados.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+</div><!-- /analytics-scope -->
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+/* ===== Ajuste de tipografías/colores para Chart.js (coherente y sobrio) ===== */
+Chart.defaults.font.family = 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#1a1a1a';
+
 const NARANJA = 'rgba(245, 124, 0, 0.9)';
 const NARANJA_SUAVE = 'rgba(255, 193, 112, .8)';
 const AZUL = 'rgba(37, 99, 235, 0.9)';
@@ -167,30 +175,24 @@ function go(patch){
 /* ====== Dinámica de filtros ====== */
 (function setupFilters(){
   const params = new URLSearchParams(location.search);
-
-  // Mantener rango seleccionado tras recarga
   const rangoSel = $('f-rango');
   rangoSel.value = params.get('rango') || 'personalizado';
 
-  // Auto aplicar al cambiar PDV/Proveedor
   $('f-pdv').addEventListener('change', e => go({ pdv: e.target.value || null }));
   $('f-prov').addEventListener('change', e => go({ prov: e.target.value || null }));
 
-  // Presets de rango -> calculan d1/d2 y aplican
   rangoSel.addEventListener('change', e => {
     const r = e.target.value;
-    if (r === 'personalizado') return; // el usuario editará fechas manualmente
+    if (r === 'personalizado') return;
     const { d1, d2 } = rangeDates(r);
     go({ rango: r, d1, d2 });
   });
 
-  // Al elegir la segunda fecha (Hasta), aplicar con rango=personalizado
   $('f-d2').addEventListener('change', () => {
     const d1 = $('f-d1').value, d2 = $('f-d2').value;
     if (d1 && d2) go({ rango: 'personalizado', d1, d2 });
   });
 
-  // Ajustar min/max para evitar rangos inválidos
   const syncBounds = () => {
     $('f-d2').min = $('f-d1').value || '';
     $('f-d1').max = $('f-d2').value || '';
@@ -200,40 +202,28 @@ function go(patch){
   syncBounds();
 })();
 
-// Util: fechas a ISO (YYYY-MM-DD)
+/* Utils fechas */
 function iso(y,m,d){ return new Date(y, m, d).toISOString().slice(0,10); }
-function today(){
-  const t=new Date(); return iso(t.getFullYear(), t.getMonth(), t.getDate());
-}
+function today(){ const t=new Date(); return iso(t.getFullYear(), t.getMonth(), t.getDate()); }
 function firstOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth(), 1); }
 function lastOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth()+1, 0); }
 function addDays(dt, n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
 
-// Calcula d1/d2 para cada preset
 function rangeDates(key){
   const now = new Date();
   switch(key){
-    case 'mes_actual':
-      return { d1: firstOfMonth(now), d2: today() };
-    case 'mes_anterior': {
-      const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
-      return { d1: firstOfMonth(prev), d2: lastOfMonth(prev) };
-    }
-    case 'ult_30': {
-      const end = new Date();
-      const start = addDays(end, -29);
-      return { d1: start.toISOString().slice(0,10), d2: end.toISOString().slice(0,10) };
-    }
-    case 'este_anio':
-      return { d1: iso(now.getFullYear(), 0, 1), d2: today() };
-    case 'anio_pasado':
-      return { d1: iso(now.getFullYear()-1, 0, 1), d2: iso(now.getFullYear()-1, 11, 31) };
-    default:
-      return { d1: $('f-d1').value, d2: $('f-d2').value };
+    case 'mes_actual':   return { d1: firstOfMonth(now), d2: today() };
+    case 'mes_anterior': { const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+                           return { d1: firstOfMonth(prev), d2: lastOfMonth(prev) }; }
+    case 'ult_30':       { const end = new Date(); const start = addDays(end, -29);
+                           return { d1: start.toISOString().slice(0,10), d2: end.toISOString().slice(0,10) }; }
+    case 'este_anio':    return { d1: iso(now.getFullYear(), 0, 1), d2: today() };
+    case 'anio_pasado':  return { d1: iso(now.getFullYear()-1, 0, 1), d2: iso(now.getFullYear()-1, 11, 31) };
+    default:             return { d1: $('f-d1').value, d2: $('f-d2').value };
   }
 }
 
-/* ====== Formato pesos (puntos de mil) ====== */
+/* Formato pesos (puntos de mil) */
 function formatMoneyES() {
   document.querySelectorAll('.money-es').forEach(el => {
     const raw = el.getAttribute('data-v') || el.textContent;
@@ -248,15 +238,13 @@ const TOP_PROV = JSON.parse('{{ top_prov_json|escapejs }}');
 const POR_PDV  = JSON.parse('{{ por_pdv_json|escapejs }}');
 const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
 
-/* ==== Top proveedores (responsive y legible en móvil) ==== */
+/* ==== Top proveedores (legible y sin scroll infinito) ==== */
 (function () {
   if (!TOP_PROV.length) return;
-
   const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-  // Quita sufijos y abrevia nombres largos (mostramos completo en tooltip)
   const stripSufijos = s =>
-    s.replace(/\b(S\.?A\.?S?\.?|SAS|S\.?A\.?|LTDA|Ltda|LTA|S\.? en C\.?)\b/gi, '').trim();
+    s.replace(/\b(S\.?A\.?S?\.?|SAS|S\.?A\.?|LTDA|Ltda|S\. en C\.)\b/gi, '').trim();
 
   const abrevia = s => {
     const base = stripSufijos(s);
@@ -268,12 +256,9 @@ const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
   const labels = TOP_PROV.map(x => abrevia(x.nombre));
   const data = TOP_PROV.map(x => x.total);
 
-  // Altura dinámica para barras horizontales en móvil
   const canvas = $('topProveedores');
-  if (isMobile) {
-    const perBar = 28; // alto por barra
-    canvas.height = Math.max(180, perBar * labels.length + 30);
-  }
+  // altura controlada (no hace scroll infinito)
+  canvas.height = isMobile ? Math.max(260, labels.length * 26 + 40) : 320;
 
   new Chart(canvas, {
     type: 'bar',
@@ -283,7 +268,7 @@ const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
     },
     options: {
       indexAxis: isMobile ? 'y' : 'x',
-      maintainAspectRatio: !isMobile,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -299,13 +284,9 @@ const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
       scales: isMobile
         ? {
             x: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } },
-            y: {
-              ticks: { autoSkip: false, maxTicksLimit: labels.length }
-            }
+            y: { ticks: { autoSkip: false, maxTicksLimit: labels.length } }
           }
-        : {
-            y: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } }
-          },
+        : { y: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } } },
       onClick: (evt, els) => {
         if (!els || !els.length) return;
         const idx = els[0].index;
@@ -325,6 +306,7 @@ if (POR_PDV.length) {
     },
     options: {
       indexAxis:'y',
+      maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
         label: ctx => '$' + (ctx.parsed.x||0).toLocaleString('es-CO')
       }}},
@@ -348,6 +330,7 @@ if (BY_MONTH.length) {
       datasets:[{ data: BY_MONTH.map(x => x.total), borderColor: AZUL, backgroundColor:'rgba(37,99,235,.12)', fill:true, tension:.3 }]
     },
     options:{
+      maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
         label: ctx => '$' + (ctx.parsed.y||0).toLocaleString('es-CO')
       }}},
