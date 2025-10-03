@@ -436,3 +436,60 @@ th.col-money, td.col-money{ text-align:right; width:220px; }
   .filters .actions{ margin-left:0; justify-content:stretch; }
   .filters .actions .button{ flex:1; }
 }
+
+/* ===========================
+   HOTFIX: Filtros Analítica (Prod)
+   - Alinea y evita desbordes
+   - Botón "Limpiar" a la derecha
+   - Comportamiento fluido en móvil
+   =========================== */
+
+.filters{
+  display:flex !important;         /* forzamos flex para prod */
+  flex-wrap:wrap;
+  gap:12px 16px;
+  align-items:flex-end;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;
+  box-shadow:0 1px 8px rgba(0,0,0,.04);
+}
+
+.filters .field{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* inputs cómodos pero sin crecer de más */
+.filters .field select,
+.filters .field input[type="date"]{
+  height:36px;
+  padding:6px 10px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+  outline:none;
+  font-size:14px;
+  min-width:150px;
+  max-width:230px;                 /* evita estiramientos raros */
+}
+
+/* Desktop: tamaños relativos de cada bloque */
+@media (min-width: 1100px){
+  .filters .field:nth-child(1){ flex:1 1 260px; }  /* Punto de venta */
+  .filters .field:nth-child(2){ flex:2 1 420px; }  /* Proveedor */
+  .filters .field:nth-child(3){ flex:1 1 220px; }  /* Rango */
+  .filters .field:nth-child(4){ flex:0 0 190px; }  /* Desde */
+  .filters .field:nth-child(5){ flex:0 0 190px; }  /* Hasta */
+  .filters .actions{ margin-left:auto; }           /* botón a la derecha */
+}
+
+/* Móvil / tablet: una columna bonita */
+@media (max-width: 1099px){
+  .filters .field{ flex:1 1 320px; }               /* 2 por fila aprox */
+  .filters .actions{ flex:1 1 100%; }              /* botón debajo y a ancho completo si quieres */
+  /* si prefieres botón normal en móvil, quita la línea de abajo */
+  /* .filters .actions .button{ width:100%; } */
+}

@@ -88,7 +88,8 @@
     <b>Top Proveedores</b>
     <small style="color:var(--muted)">clic para filtrar por proveedor</small>
   </div>
-  <canvas id="topProveedores" height="130"></canvas>
+  <!-- sin altura fija: la calculamos en JS para móvil -->
+  <canvas id="topProveedores"></canvas>
 </div>
 
 <div class="table-card" style="padding:14px; margin-top:16px;">
@@ -218,7 +219,7 @@ function rangeDates(key){
       const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
       return { d1: firstOfMonth(prev), d2: lastOfMonth(prev) };
     }
-    case 'ult_30': {            // ✅ Ajuste: cálculo limpio de 30 días
+    case 'ult_30': {
       const end = new Date();
       const start = addDays(end, -29);
       return { d1: start.toISOString().slice(0,10), d2: end.toISOString().slice(0,10) };
@@ -247,28 +248,72 @@ const TOP_PROV = JSON.parse('{{ top_prov_json|escapejs }}');
 const POR_PDV  = JSON.parse('{{ por_pdv_json|escapejs }}');
 const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
 
-/* ==== Top proveedores (clic -> prov=ID) ==== */
-if (TOP_PROV.length) {
-  new Chart($('topProveedores'), {
+/* ==== Top proveedores (responsive y legible en móvil) ==== */
+(function () {
+  if (!TOP_PROV.length) return;
+
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+  // Quita sufijos y abrevia nombres largos (mostramos completo en tooltip)
+  const stripSufijos = s =>
+    s.replace(/\b(S\.?A\.?S?\.?|SAS|S\.?A\.?|LTDA|Ltda|LTA|S\.? en C\.?)\b/gi, '').trim();
+
+  const abrevia = s => {
+    const base = stripSufijos(s);
+    const maxLen = isMobile ? 18 : 28;
+    return base.length > maxLen ? base.slice(0, maxLen) + '…' : base;
+  };
+
+  const labelsFull = TOP_PROV.map(x => x.nombre);
+  const labels = TOP_PROV.map(x => abrevia(x.nombre));
+  const data = TOP_PROV.map(x => x.total);
+
+  // Altura dinámica para barras horizontales en móvil
+  const canvas = $('topProveedores');
+  if (isMobile) {
+    const perBar = 28; // alto por barra
+    canvas.height = Math.max(180, perBar * labels.length + 30);
+  }
+
+  new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: TOP_PROV.map(x => x.nombre),
-      datasets: [{ data: TOP_PROV.map(x => x.total), backgroundColor: NARANJA }]
+      labels,
+      datasets: [{ data, backgroundColor: NARANJA }]
     },
     options: {
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
-        label: ctx => '$' + (ctx.parsed.y||0).toLocaleString('es-CO')
-      }}},
-      scales:{ y:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
+      indexAxis: isMobile ? 'y' : 'x',
+      maintainAspectRatio: !isMobile,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => labelsFull[items[0].dataIndex],
+            label: ctx => {
+              const v = isMobile ? ctx.parsed.x : ctx.parsed.y;
+              return '$' + (v || 0).toLocaleString('es-CO');
+            }
+          }
+        }
+      },
+      scales: isMobile
+        ? {
+            x: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } },
+            y: {
+              ticks: { autoSkip: false, maxTicksLimit: labels.length }
+            }
+          }
+        : {
+            y: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } }
+          },
       onClick: (evt, els) => {
         if (!els || !els.length) return;
         const idx = els[0].index;
-        const provId = TOP_PROV[idx].id;
-        go({ prov: provId });
+        go({ prov: TOP_PROV[idx].id });
       }
     }
   });
-}
+})();
 
 /* ==== Compras por PDV (clic -> pdv=ID) ==== */
 if (POR_PDV.length) {
