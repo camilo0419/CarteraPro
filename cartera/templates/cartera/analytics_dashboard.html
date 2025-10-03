@@ -4,14 +4,14 @@
 {% block title %}Analytics{% endblock %}
 
 {% block content %}
-<div class="analytics-scope"><!-- ⬅️ wrapper para aislar estilos -->
+<div class="analytics-scope">
 
   <h1 style="display:flex;align-items:center;gap:10px">
     📊 Tablero Analítico
     <span class="badge">CarteraPro</span>
   </h1>
 
-  <!-- ===== Filtros (auto-aplican) ===== -->
+  <!-- Filtros -->
   <form method="get" class="filters">
     <div class="field">
       <label for="f-pdv">Punto de venta</label>
@@ -60,31 +60,63 @@
     </div>
   </form>
 
-  <!-- ===== KPIs ===== -->
+  <!-- KPIs (4 por fila) -->
   <div class="cards">
-    <div class="card">
-      <div class="k">Total compras</div>
+    <div class="card"><div class="k">Total compras</div>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_total|floatformat:0|default:'0' }}">{{ kpi_total|floatformat:0 }}</span></div></div>
+
+    <div class="card"><div class="k">Facturas</div>
+      <div class="v">{{ kpi_facturas|default:"0" }}</div></div>
+
+    <div class="card"><div class="k">Pagado</div>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_pagado|floatformat:0|default:'0' }}">{{ kpi_pagado|floatformat:0 }}</span></div></div>
+
+    <div class="card"><div class="k">Prom. días pago</div>
+      <div class="v">{{ kpi_dias|default:"0" }}</div></div>
+
+    <div class="card"><div class="k">Valor pendiente</div>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_valor_pendiente|floatformat:0|default:'0' }}">{{ kpi_valor_pendiente|floatformat:0 }}</span></div></div>
+
+    <div class="card"><div class="k"># Pendientes</div>
+      <div class="v">{{ kpi_num_pendientes|default:"0" }}</div></div>
+
+    <div class="card"><div class="k">% Pagado vs Compras</div>
+      <div class="v">{{ kpi_pct_pagado|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">% Pagos contado</div>
+      <div class="v">{{ kpi_pct_contado|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">Tasa confirmación</div>
+      <div class="v">{{ kpi_tasa_conf|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">Cobertura comprobantes</div>
+      <div class="v">{{ kpi_cob_comp|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">Top proveedor (share)</div>
+      <div class="v">{{ kpi_share_top1|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">Top 3 (share)</div>
+      <div class="v">{{ kpi_share_top3|default:"0" }}%</div></div>
+
+    <div class="card"><div class="k">Δ vs mes anterior</div>
       <div class="v">
-        $<span class="money-es" data-v="{{ kpi_total|floatformat:0 }}">{{ kpi_total|floatformat:0 }}</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="k">Facturas</div>
-      <div class="v">{{ kpi_facturas }}</div>
-    </div>
-    <div class="card">
-      <div class="k">Pagado</div>
-      <div class="v">
-        $<span class="money-es" data-v="{{ kpi_pagado|floatformat:0 }}">{{ kpi_pagado|floatformat:0 }}</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="k">Prom. días pago</div>
-      <div class="v">{{ kpi_dias }}</div>
-    </div>
+        {% if kpi_delta_mes_ant is not None %}
+          {{ kpi_delta_mes_ant }}% &nbsp;
+          <small class="muted">($<span class="money-es" data-v="{{ kpi_delta_monto|floatformat:0|default:'0' }}">{{ kpi_delta_monto|floatformat:0 }}</span>)</small>
+        {% else %} — {% endif %}
+      </div></div>
+
+    <div class="card"><div class="k">Nuevas (7 días)</div>
+      <div class="v">{{ kpi_nuevas_7d|default:"0" }}</div></div>
+
+    <div class="card"><div class="k">Antigüedad prom. (pend.)</div>
+      <div class="v">{{ kpi_antig_pend|default:"0" }}</div></div>
+
+    <div class="card"><div class="k">Ticket prom. (pend.)</div>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_ticket_pend|floatformat:0|default:'0' }}">{{ kpi_ticket_pend|floatformat:0 }}</span></div></div>
   </div>
 
-  <!-- ===== Gráficas ===== -->
+  <!-- Gráficas -->
   <div class="table-card" style="padding:14px; margin-top:16px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <b>Top Proveedores</b>
@@ -109,18 +141,13 @@
     <canvas id="comprasMensuales" height="120"></canvas>
   </div>
 
-  <!-- ===== Top facturas ===== -->
   <div class="table-card" style="padding:14px; margin-top:16px;">
     <h2>Top Facturas</h2>
     <table>
       <thead>
         <tr>
-          <th>Fecha</th>
-          <th>N.º</th>
-          <th>Proveedor</th>
-          <th>PDV</th>
-          <th class="col-money">Valor</th>
-          <th style="text-align:center;">Detalle</th>
+          <th>Fecha</th><th>N.º</th><th>Proveedor</th><th>PDV</th>
+          <th class="col-money">Valor</th><th style="text-align:center;">Detalle</th>
         </tr>
       </thead>
       <tbody>
@@ -130,13 +157,9 @@
           <td>{{ f.numero_factura }}</td>
           <td>{{ f.proveedor__nombre }}</td>
           <td>{{ f.punto_venta__nombre }}</td>
-          <td class="col-money">
-            $<span class="money-es" data-v="{{ f.valor_factura|floatformat:0 }}">{{ f.valor_factura|floatformat:0 }}</span>
-          </td>
+          <td class="col-money">$<span class="money-es" data-v="{{ f.valor_factura|floatformat:0|default:'0' }}">{{ f.valor_factura|floatformat:0 }}</span></td>
           <td style="text-align:center;">
-            <a class="icon-btn"
-               href="{% url 'factura_detalle' f.id %}?next={{ request.get_full_path|urlencode }}"
-               title="Ver factura">👁</a>
+            <a class="icon-btn" href="{% url 'factura_detalle' f.id %}?next={{ request.get_full_path|urlencode }}" title="Ver factura">👁</a>
           </td>
         </tr>
         {% empty %}
@@ -146,13 +169,12 @@
     </table>
   </div>
 
-</div><!-- /analytics-scope -->
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-/* ===== Ajuste de tipografías/colores para Chart.js (coherente y sobrio) ===== */
 Chart.defaults.font.family = 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
 Chart.defaults.font.size = 12;
 Chart.defaults.color = '#1a1a1a';
@@ -162,7 +184,6 @@ const NARANJA_SUAVE = 'rgba(255, 193, 112, .8)';
 const AZUL = 'rgba(37, 99, 235, 0.9)';
 
 function $(id){ return document.getElementById(id); }
-
 function go(patch){
   const url = new URL(window.location.href);
   for (const [k,v] of Object.entries(patch)){
@@ -172,180 +193,87 @@ function go(patch){
   window.location.replace(url.toString());
 }
 
-/* ====== Dinámica de filtros ====== */
-(function setupFilters(){
+/* Filtros dinámicos */
+(function(){
   const params = new URLSearchParams(location.search);
   const rangoSel = $('f-rango');
-  rangoSel.value = params.get('rango') || 'personalizado';
-
+  rangoSel.value = params.get('rango') || 'mes_actual';
   $('f-pdv').addEventListener('change', e => go({ pdv: e.target.value || null }));
   $('f-prov').addEventListener('change', e => go({ prov: e.target.value || null }));
-
   rangoSel.addEventListener('change', e => {
-    const r = e.target.value;
-    if (r === 'personalizado') return;
-    const { d1, d2 } = rangeDates(r);
-    go({ rango: r, d1, d2 });
+    const r = e.target.value; if (r === 'personalizado') return;
+    const { d1, d2 } = rangeDates(r); go({ rango: r, d1, d2 });
   });
-
   $('f-d2').addEventListener('change', () => {
     const d1 = $('f-d1').value, d2 = $('f-d2').value;
-    if (d1 && d2) go({ rango: 'personalizado', d1, d2 });
+    if (d1 && d2) go({ rango:'personalizado', d1, d2 });
   });
-
-  const syncBounds = () => {
-    $('f-d2').min = $('f-d1').value || '';
-    $('f-d1').max = $('f-d2').value || '';
-  };
-  $('f-d1').addEventListener('change', syncBounds);
-  $('f-d2').addEventListener('change', syncBounds);
-  syncBounds();
+  const sync=()=>{ $('f-d2').min=$('f-d1').value||''; $('f-d1').max=$('f-d2').value||''; };
+  $('f-d1').addEventListener('change', sync); $('f-d2').addEventListener('change', sync); sync();
 })();
 
-/* Utils fechas */
-function iso(y,m,d){ return new Date(y, m, d).toISOString().slice(0,10); }
-function today(){ const t=new Date(); return iso(t.getFullYear(), t.getMonth(), t.getDate()); }
-function firstOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth(), 1); }
-function lastOfMonth(dt){ return iso(dt.getFullYear(), dt.getMonth()+1, 0); }
-function addDays(dt, n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
-
+/* Fechas util */
+function iso(y,m,d){ return new Date(y,m,d).toISOString().slice(0,10); }
+function today(){ const t=new Date(); return iso(t.getFullYear(),t.getMonth(),t.getDate()); }
+function addDays(dt,n){ const d=new Date(dt); d.setDate(d.getDate()+n); return d; }
 function rangeDates(key){
   const now = new Date();
   switch(key){
-    case 'mes_actual':   return { d1: firstOfMonth(now), d2: today() };
-    case 'mes_anterior': { const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
-                           return { d1: firstOfMonth(prev), d2: lastOfMonth(prev) }; }
-    case 'ult_30':       { const end = new Date(); const start = addDays(end, -29);
+    case 'mes_actual':   return { d1: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10), d2: today() };
+    case 'mes_anterior': { const p = new Date(now.getFullYear(), now.getMonth()-1, 1);
+                           const last = new Date(p.getFullYear(), p.getMonth()+1, 0);
+                           return { d1: p.toISOString().slice(0,10), d2: last.toISOString().slice(0,10) }; }
+    case 'ult_30':       { const end=new Date(); const start=addDays(end,-29);
                            return { d1: start.toISOString().slice(0,10), d2: end.toISOString().slice(0,10) }; }
-    case 'este_anio':    return { d1: iso(now.getFullYear(), 0, 1), d2: today() };
-    case 'anio_pasado':  return { d1: iso(now.getFullYear()-1, 0, 1), d2: iso(now.getFullYear()-1, 11, 31) };
+    case 'este_anio':    return { d1: iso(now.getFullYear(),0,1), d2: today() };
+    case 'anio_pasado':  return { d1: iso(now.getFullYear()-1,0,1), d2: iso(now.getFullYear()-1,11,31) };
     default:             return { d1: $('f-d1').value, d2: $('f-d2').value };
   }
 }
 
-/* Formato pesos (puntos de mil) */
-function formatMoneyES() {
-  document.querySelectorAll('.money-es').forEach(el => {
-    const raw = el.getAttribute('data-v') || el.textContent;
-    const n = Number(String(raw).replace(/[^\d.-]/g,''));
-    if (!isNaN(n)) el.textContent = n.toLocaleString('es-CO');
+/* Formato pesos */
+function formatMoneyES(){
+  document.querySelectorAll('.money-es').forEach(el=>{
+    const raw=el.getAttribute('data-v')||el.textContent;
+    const n=Number(String(raw).replace(/[^\d.-]/g,'')); if(!isNaN(n)) el.textContent=n.toLocaleString('es-CO');
   });
 }
 document.addEventListener('DOMContentLoaded', formatMoneyES);
 
-/* ==== Datos desde Django ==== */
+/* Data desde Django */
 const TOP_PROV = JSON.parse('{{ top_prov_json|escapejs }}');
 const POR_PDV  = JSON.parse('{{ por_pdv_json|escapejs }}');
 const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
 
-/* ==== Top proveedores (legible y sin scroll infinito) ==== */
-(function () {
-  if (!TOP_PROV.length) return;
-  const isMobile = window.matchMedia('(max-width: 768px)').matches;
-
-  const stripSufijos = s =>
-    s.replace(/\b(S\.?A\.?S?\.?|SAS|S\.?A\.?|LTDA|Ltda|S\. en C\.)\b/gi, '').trim();
-
-  const abrevia = s => {
-    const base = stripSufijos(s);
-    const maxLen = isMobile ? 18 : 28;
-    return base.length > maxLen ? base.slice(0, maxLen) + '…' : base;
-  };
-
-  const labelsFull = TOP_PROV.map(x => x.nombre);
-  const labels = TOP_PROV.map(x => abrevia(x.nombre));
-  const data = TOP_PROV.map(x => x.total);
-
-  const canvas = $('topProveedores');
-  // altura controlada (no hace scroll infinito)
-  canvas.height = isMobile ? Math.max(260, labels.length * 26 + 40) : 320;
-
-  new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ data, backgroundColor: NARANJA }]
-    },
-    options: {
-      indexAxis: isMobile ? 'y' : 'x',
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: items => labelsFull[items[0].dataIndex],
-            label: ctx => {
-              const v = isMobile ? ctx.parsed.x : ctx.parsed.y;
-              return '$' + (v || 0).toLocaleString('es-CO');
-            }
-          }
-        }
-      },
-      scales: isMobile
-        ? {
-            x: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } },
-            y: { ticks: { autoSkip: false, maxTicksLimit: labels.length } }
-          }
-        : { y: { ticks: { callback: v => '$' + v.toLocaleString('es-CO') } } },
-      onClick: (evt, els) => {
-        if (!els || !els.length) return;
-        const idx = els[0].index;
-        go({ prov: TOP_PROV[idx].id });
-      }
-    }
-  });
+/* Gráficas (igual a la versión previa) */
+(function(){
+  if(!TOP_PROV.length) return;
+  const isMobile=window.matchMedia('(max-width:768px)').matches;
+  const strip=s=>s.replace(/\b(S\.?A\.?S?\.?|SAS|S\.?A\.?|LTDA|Ltda|S\. en C\.)\b/gi,'').trim();
+  const ab=s=>{const b=strip(s),m=isMobile?18:28;return b.length>m?b.slice(0,m)+'…':b;};
+  const labelsFull=TOP_PROV.map(x=>x.nombre), labels=TOP_PROV.map(x=>ab(x.nombre)), data=TOP_PROV.map(x=>x.total);
+  const canvas=$('topProveedores'); canvas.height=isMobile?Math.max(260,labels.length*26+40):320;
+  new Chart(canvas,{type:'bar',data:{labels,datasets:[{data,backgroundColor:NARANJA}]},
+    options:{indexAxis:isMobile?'y':'x',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{
+      title:it=>labelsFull[it[0].dataIndex],label:ctx=>'$'+(isMobile?ctx.parsed.x:ctx.parsed.y).toLocaleString('es-CO')}}},
+      scales:isMobile?{x:{ticks:{callback:v=>'$'+v.toLocaleString('es-CO')}},y:{ticks:{autoSkip:false,maxTicksLimit:labels.length}}}
+                      :{y:{ticks:{callback:v=>'$'+v.toLocaleString('es-CO')}}},
+      onClick:(e,els)=>{ if(!els||!els.length) return; const i=els[0].index; go({prov:TOP_PROV[i].id}); }
+  }});
 })();
-
-/* ==== Compras por PDV (clic -> pdv=ID) ==== */
-if (POR_PDV.length) {
-  new Chart($('comprasPorPDV'), {
-    type: 'bar',
-    data: {
-      labels: POR_PDV.map(x => x.nombre),
-      datasets: [{ data: POR_PDV.map(x => x.total), backgroundColor: NARANJA_SUAVE, borderColor:NARANJA, borderWidth:2 }]
-    },
-    options: {
-      indexAxis:'y',
-      maintainAspectRatio:false,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
-        label: ctx => '$' + (ctx.parsed.x||0).toLocaleString('es-CO')
-      }}},
-      scales:{ x:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
-      onClick: (evt, els) => {
-        if (!els || !els.length) return;
-        const idx = els[0].index;
-        const pdvId = POR_PDV[idx].id;
-        go({ pdv: pdvId });
-      }
-    }
-  });
-}
-
-/* ==== Compras mensuales (clic -> d1/d2 del mes) ==== */
-if (BY_MONTH.length) {
-  new Chart($('comprasMensuales'), {
-    type: 'line',
-    data:{
-      labels: BY_MONTH.map(x => new Date(x.m).toLocaleDateString('es-CO',{month:'short',year:'2-digit'})),
-      datasets:[{ data: BY_MONTH.map(x => x.total), borderColor: AZUL, backgroundColor:'rgba(37,99,235,.12)', fill:true, tension:.3 }]
-    },
-    options:{
-      maintainAspectRatio:false,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
-        label: ctx => '$' + (ctx.parsed.y||0).toLocaleString('es-CO')
-      }}},
-      scales:{ y:{ ticks:{ callback:v=>'$'+v.toLocaleString('es-CO') } } },
-      onClick: (evt, els) => {
-        if (!els || !els.length) return;
-        const idx = els[0].index;
-        const first = new Date(BY_MONTH[idx].m);
-        const d1 = first.toISOString().slice(0,10);
-        const last = new Date(first.getFullYear(), first.getMonth()+1, 0);
-        const d2 = last.toISOString().slice(0,10);
-        go({ rango: 'personalizado', d1, d2 });
-      }
-    }
-  });
-}
+if(POR_PDV.length){ new Chart($('comprasPorPDV'),{type:'bar',data:{
+  labels:POR_PDV.map(x=>x.nombre),
+  datasets:[{data:POR_PDV.map(x=>x.total),backgroundColor:NARANJA_SUAVE,borderColor:NARANJA,borderWidth:2}]},
+  options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{
+    label:ctx=>'$'+(ctx.parsed.x||0).toLocaleString('es-CO')}}},scales:{x:{ticks:{callback:v=>'$'+v.toLocaleString('es-CO')}}},
+    onClick:(e,els)=>{ if(!els||!els.length) return; const i=els[0].index; go({pdv:POR_PDV[i].id}); }}}); }
+if(BY_MONTH.length){ new Chart($('comprasMensuales'),{type:'line',data:{
+  labels:BY_MONTH.map(x=>new Date(x.m).toLocaleDateString('es-CO',{month:'short',year:'2-digit'})),
+  datasets:[{data:BY_MONTH.map(x=>x.total),borderColor:AZUL,backgroundColor:'rgba(37,99,235,.12)',fill:true,tension:.3}]},
+  options:{maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{
+    label:ctx=>'$'+(ctx.parsed.y||0).toLocaleString('es-CO')}}},scales:{y:{ticks:{callback:v=>'$'+v.toLocaleString('es-CO')}}},
+  onClick:(e,els)=>{ if(!els||!els.length) return; const i=els[0].index; const first=new Date(BY_MONTH[i].m);
+    const d1=first.toISOString().slice(0,10); const last=new Date(first.getFullYear(),first.getMonth()+1,0);
+    const d2=last.toISOString().slice(0,10); go({rango:'personalizado',d1,d2}); }}}); }
 </script>
 {% endblock %}

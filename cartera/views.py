@@ -636,154 +636,218 @@ class PagoViewSet(viewsets.ModelViewSet):
 
 # ---------------------- dashboard analítica ----------------------
 
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Sum, Count, F, Avg, FloatField, Q
+from django.db.models.functions import TruncMonth, Extract
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.shortcuts import render
+
+from .models import Factura, Pago, PuntoVenta, Proveedor
 
 
 def _d(s, fallback):
-    """parsea YYYY-MM-DD o devuelve fallback."""
     try:
         x = parse_date(s) if isinstance(s, str) else None
         return x or fallback
     except Exception:
         return fallback
 
-
 def _j(x):
-    """json seguro para incrustar en template."""
+    import json
     return json.dumps(x, ensure_ascii=False, default=str)
 
-def dashboard(request):
-    # ---- Top proveedores (ej: sumatoria de facturas por proveedor)
-    top_prov = (
-        Factura.objects
-        .values("proveedor__nombre")
-        .annotate(total=Sum("valor_factura"))
-        .order_by("-total")[:10]
-    )
+def _month_bounds(today: date):
+    first = date(today.year, today.month, 1)
+    return first, today
 
-    # ---- Por punto de venta
-    por_pdv = (
-        Factura.objects
-        .values("punto_venta__nombre")
-        .annotate(total=Sum("valor_factura"))
-        .order_by("-total")
-    )
-
-    # ---- Por mes (agrupar por fecha_factura)
-    by_month = (
-        Factura.objects
-        .extra(select={"mes": "DATE_TRUNC('month', fecha_factura)"})
-        .values("mes")
-        .annotate(total=Sum("valor_factura"))
-        .order_by("mes")
-    )
-
-    context = {
-        "top_prov_json": json.dumps(list(top_prov), ensure_ascii=False, default=str),
-        "por_pdv_json": json.dumps(list(por_pdv), ensure_ascii=False, default=str),
-        "by_month_json": json.dumps(list(by_month), ensure_ascii=False, default=str),
-    }
-    return render(request, "cartera/dashboard.html", context)
+def _safe_div(num, den):
+    try:
+        if not den or den == 0:
+            return Decimal('0')
+        return (Decimal(num) / Decimal(den)) * Decimal('100')
+    except (InvalidOperation, ZeroDivisionError, TypeError):
+        return Decimal('0')
 
 
 @login_required
 @user_passes_test(lambda u: u.is_staff)
 def analytics_dashboard(request):
     """
-    Tablero para staff: filtros GET -> ?pdv=ID&prov=ID&d1=YYYY-MM-DD&d2=YYYY-MM-DD
-    KPIs, Top proveedores, Compras por PDV, Compras mensuales, Top facturas.
-    Click en gráficas aplica filtros (recarga con nuevos parámetros).
+    Tablero Staff:
+    - Rango por defecto: mes_actual
+    - Pendientes ignoran fechas (pero respetan PDV/Proveedor)
+    - Se agregan KPIs avanzadas.
     """
-    qs_base = (
-        Factura.objects
-        .select_related("proveedor", "punto_venta")
-        .all()
-    )
+    today = date.today()
 
-    # ---- Filtros ----
-    pdv = request.GET.get("pdv")    # punto de venta id
-    prov = request.GET.get("prov")  # proveedor id
-    d1 = _d(request.GET.get("d1"), date(date.today().year, 1, 1))  # 1 enero del año actual
-    d2 = _d(request.GET.get("d2"), date.today())                   # hoy
+    # ---- RANGO ----
+    rango = (request.GET.get("rango") or "").strip() or "mes_actual"
+    if rango == "mes_actual":
+        d1_def, d2_def = _month_bounds(today)
+    elif rango == "mes_anterior":
+        y = today.year if today.month > 1 else today.year - 1
+        m = today.month - 1 if today.month > 1 else 12
+        d1_def = date(y, m, 1)
+        from calendar import monthrange
+        d2_def = date(y, m, monthrange(y, m)[1])
+    elif rango == "ult_30":
+        d2_def = today
+        d1_def = today - timedelta(days=29)
+    elif rango == "este_anio":
+        d1_def, d2_def = date(today.year, 1, 1), today
+    elif rango == "anio_pasado":
+        d1_def, d2_def = date(today.year-1, 1, 1), date(today.year-1, 12, 31)
+    else:
+        d1_def, d2_def = _month_bounds(today)
 
+    if (request.GET.get("rango") or "") == "personalizado":
+        d1 = _d(request.GET.get("d1"), d1_def)
+        d2 = _d(request.GET.get("d2"), d2_def)
+    else:
+        d1, d2 = d1_def, d2_def
+
+    # ---- BASE con filtros PDV/PROV ----
+    qs_base = Factura.objects.select_related("proveedor", "punto_venta").all()
+    pdv = request.GET.get("pdv")
+    prov = request.GET.get("prov")
     if pdv and str(pdv).isdigit():
         qs_base = qs_base.filter(punto_venta_id=int(pdv))
-
     if prov and str(prov).isdigit():
         qs_base = qs_base.filter(proveedor_id=int(prov))
 
-    qs_base = qs_base.filter(fecha_factura__range=[d1, d2])
+    # rango para métricas de período
+    qs_periodo = qs_base.filter(fecha_factura__range=[d1, d2])
 
-    # ---- KPIs ----
-    agg = qs_base.aggregate(total=Sum('valor_factura'), cnt=Count('id'))
+    # ---- KPIs del período ----
+    agg = qs_periodo.aggregate(total=Sum('valor_factura'), cnt=Count('id'))
     total_compras = agg['total'] or Decimal('0')
     total_facturas = agg['cnt'] or 0
 
-    pagos_qs = Pago.objects.filter(factura__in=qs_base)
+    pagos_qs = Pago.objects.filter(factura__in=qs_periodo)
     pagado = pagos_qs.aggregate(t=Sum('valor_pagado'))['t'] or Decimal('0')
 
-    # Promedio de días de pago (solo facturas con pago) - PostgreSQL
     dias_prom = (
-        pagos_qs
-        .annotate(
-            secs=Extract(
-                F('fecha_pago') - F('factura__fecha_factura'),
-                'epoch',
-                output_field=FloatField(),
-            )
-        )
-        .aggregate(avg_days=Avg(F('secs') / 86400.0))
+        pagos_qs.annotate(
+            secs=Extract(F('fecha_pago') - F('factura__fecha_factura'),
+                         'epoch', output_field=FloatField())
+        ).aggregate(avg_days=Avg(F('secs') / 86400.0))
     )['avg_days'] or 0.0
 
-    # ---- Top proveedores (10) ----
-    top_prov = list(
-        qs_base.values('proveedor__id', 'proveedor__nombre')
-               .annotate(total=Sum('valor_factura'))
-               .order_by('-total')[:10]
+    # ---- Pendientes (IGNORA fechas) ----
+    pend_qs = Factura.objects.filter(estado='pendiente')
+    if pdv and str(pdv).isdigit():
+        pend_qs = pend_qs.filter(punto_venta_id=int(pdv))
+    if prov and str(prov).isdigit():
+        pend_qs = pend_qs.filter(proveedor_id=int(prov))
+
+    valor_pendiente = pend_qs.aggregate(
+        t=Sum(F('valor_factura') - F('total_pagado'))
+    )['t'] or Decimal('0')
+    num_pendientes = pend_qs.count()
+
+    # Antigüedad promedio y ticket prom de pendientes
+    hoy_dt = timezone.localdate()
+    if num_pendientes:
+        edades = [
+            (hoy_dt - f.fecha_factura).days
+            for f in pend_qs.only('fecha_factura')
+        ]
+        antig_prom_pend = round(sum(edades) / len(edades), 1)
+        from django.db.models import FloatField as FF
+        ticket_prom_pend = pend_qs.aggregate(
+            avg=Avg(F('valor_factura') - F('total_pagado'), output_field=FF())
+        )['avg'] or 0.0
+    else:
+        antig_prom_pend = 0.0
+        ticket_prom_pend = 0.0
+
+    # ---- Extra KPIs del período ----
+    pct_pagado = _safe_div(pagado, total_compras)
+
+    total_pagos = pagos_qs.count() or 0
+    pagos_contado = pagos_qs.filter(notas__icontains='auto-generado').count()
+    pct_pagos_contado = _safe_div(pagos_contado, total_pagos)
+
+    fact_con_pago = qs_periodo.filter(pagos__isnull=False).distinct().count() or 0
+    fact_confirmadas = qs_periodo.filter(confirmado_pago=True).distinct().count() or 0
+    tasa_confirmacion = _safe_div(fact_confirmadas, fact_con_pago)
+
+    pagos_con_comp = pagos_qs.exclude(Q(comprobante__isnull=True) | Q(comprobante__exact='')).count()
+    cobertura_comprobantes = _safe_div(pagos_con_comp, total_pagos)
+
+    # shares por proveedor (sobre total del período)
+    top_prov_agg = list(
+        qs_periodo.values('proveedor__id', 'proveedor__nombre')
+                  .annotate(total=Sum('valor_factura'))
+                  .order_by('-total')[:3]
     )
+    top_total = sum((r['total'] or 0) for r in top_prov_agg) or Decimal('0')
+    share_top1 = _safe_div(top_prov_agg[0]['total'] if top_prov_agg else 0, total_compras)
+    share_top3 = _safe_div(top_total, total_compras)
+
+    # Δ vs mes anterior (sólo si rango es mes_actual)
+    if rango == "mes_actual":
+        # mismo filtro PDV/PROV pero en mes anterior
+        y = today.year if today.month > 1 else today.year - 1
+        m = today.month - 1 if today.month > 1 else 12
+        from calendar import monthrange
+        prev_d1 = date(y, m, 1)
+        prev_d2 = date(y, m, monthrange(y, m)[1])
+        prev_qs = Factura.objects.select_related("proveedor", "punto_venta")
+        if pdv and str(pdv).isdigit():
+            prev_qs = prev_qs.filter(punto_venta_id=int(pdv))
+        if prov and str(prov).isdigit():
+            prev_qs = prev_qs.filter(proveedor_id=int(prov))
+        prev_qs = prev_qs.filter(fecha_factura__range=[prev_d1, prev_d2])
+        prev_total = prev_qs.aggregate(t=Sum('valor_factura'))['t'] or Decimal('0')
+        delta_mes_ant = _safe_div(total_compras - prev_total, prev_total)
+        delta_monto = total_compras - prev_total
+    else:
+        delta_mes_ant = None   # lo mostramos como “—”
+        delta_monto = Decimal('0')
+
+    # Nuevas 7 días (por creado_en)
+    start_7 = timezone.now() - timedelta(days=7)
+    nuevas_7d = qs_base.filter(creado_en__gte=start_7).count()
+
+    # ---- Series para gráficas ----
     top_prov = [
         {"id": r["proveedor__id"], "nombre": r["proveedor__nombre"], "total": r["total"]}
-        for r in top_prov
+        for r in qs_periodo.values('proveedor__id', 'proveedor__nombre')
+                          .annotate(total=Sum('valor_factura'))
+                          .order_by('-total')[:10]
     ]
-
-    # ---- Compras por PDV ----
-    por_pdv = list(
-        qs_base.values('punto_venta__id', 'punto_venta__nombre')
-               .annotate(total=Sum('valor_factura'))
-               .order_by('-total')
-    )
     por_pdv = [
         {"id": r["punto_venta__id"], "nombre": r["punto_venta__nombre"], "total": r["total"]}
-        for r in por_pdv
+        for r in qs_periodo.values('punto_venta__id', 'punto_venta__nombre')
+                          .annotate(total=Sum('valor_factura'))
+                          .order_by('-total')
     ]
-
-    # ---- Compras por mes ----
-    by_month_qs = (
-        qs_base
-        .annotate(m=TruncMonth('fecha_factura'))
-        .values('m')
-        .annotate(total=Sum('valor_factura'))
-        .order_by('m')
-    )
+    by_month_qs = (qs_periodo
+                   .annotate(m=TruncMonth('fecha_factura'))
+                   .values('m')
+                   .annotate(total=Sum('valor_factura'))
+                   .order_by('m'))
     by_month = []
     for r in by_month_qs:
         m = r["m"]
-        # Si m es datetime -> pásalo a date; si es date, déjalo así
         if isinstance(m, datetime):
             m = m.date()
         by_month.append({"m": m.isoformat(), "total": r["total"]})
 
-    # ---- Top facturas (drill al detalle) ----
     top_facturas = list(
-        qs_base.order_by('-valor_factura')
-               .values(
-                   'id', 'numero_factura', 'fecha_factura',
-                   'proveedor__nombre', 'punto_venta__nombre', 'valor_factura'
-               )[:12]
+        qs_periodo.order_by('-valor_factura')
+                  .values('id','numero_factura','fecha_factura',
+                          'proveedor__nombre','punto_venta__nombre','valor_factura')[:12]
     )
 
-    # ---- combos filtros ----
-    pdvs = PuntoVenta.objects.all().order_by('nombre').values('id', 'nombre')
-    provs = Proveedor.objects.all().order_by('nombre').values('id', 'nombre')
+    # ---- combos ----
+    pdvs = PuntoVenta.objects.order_by('nombre').values('id', 'nombre')
+    provs = Proveedor.objects.order_by('nombre').values('id', 'nombre')
 
     ctx = {
         "filters": {
@@ -791,17 +855,35 @@ def analytics_dashboard(request):
             "prov": int(prov) if prov and str(prov).isdigit() else "",
             "d1": d1.isoformat(),
             "d2": d2.isoformat(),
+            "rango": rango,
         },
         "pdvs": list(pdvs),
         "provs": list(provs),
 
-        # KPIs
+        # KPIs básicas
         "kpi_total": total_compras,
         "kpi_facturas": total_facturas,
         "kpi_pagado": pagado,
         "kpi_dias": round(float(dias_prom), 1),
 
-        # data (json para Chart.js)
+        # Pendientes (sin rango)
+        "kpi_valor_pendiente": valor_pendiente,
+        "kpi_num_pendientes": num_pendientes,
+        "kpi_antig_pend": antig_prom_pend,
+        "kpi_ticket_pend": ticket_prom_pend,
+
+        # Avanzadas
+        "kpi_pct_pagado": round(pct_pagado, 1),
+        "kpi_pct_contado": round(pct_pagos_contado, 1),
+        "kpi_tasa_conf": round(tasa_confirmacion, 1),
+        "kpi_cob_comp": round(cobertura_comprobantes, 1),
+        "kpi_share_top1": round(share_top1, 1),
+        "kpi_share_top3": round(share_top3, 1),
+        "kpi_delta_mes_ant": None if delta_mes_ant is None else round(delta_mes_ant, 1),
+        "kpi_delta_monto": delta_monto,
+        "kpi_nuevas_7d": nuevas_7d,
+
+        # series
         "top_prov_json": _j(top_prov),
         "por_pdv_json": _j(por_pdv),
         "by_month_json": _j(by_month),
