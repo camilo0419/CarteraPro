@@ -51,6 +51,10 @@
         placeholder="Buscar proveedor, punto, número, valor, etc…"
         value="{{ request.GET.q|default_if_none:'' }}"
       />
+      {# preservamos proveedor si viene por GET #}
+      {% if request.GET.prov %}
+        <input type="hidden" name="prov" value="{{ request.GET.prov }}">
+      {% endif %}
       <button class="btn" type="submit">Buscar</button>
     </form>
   </div>
@@ -160,21 +164,23 @@
 
 {% if is_paginated %}
   <div class="pagination">
-    {% if page_obj.has_previous %}
-      <a href="?page=1">&laquo; Primero</a>
-      <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-    {% else %}
-      <span>Primero</span><span>Anterior</span>
-    {% endif %}
+    {% with q=request.GET.q|default_if_none:'' prov=request.GET.prov|default_if_none:'' %}
+      {% if page_obj.has_previous %}
+        <a href="?q={{ q|urlencode }}&prov={{ prov|urlencode }}&page=1">&laquo; Primero</a>
+        <a href="?q={{ q|urlencode }}&prov={{ prov|urlencode }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+      {% else %}
+        <span>Primero</span><span>Anterior</span>
+      {% endif %}
 
-    <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+      <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-      <a href="?page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
-    {% else %}
-      <span>Siguiente</span><span>Último</span>
-    {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?q={{ q|urlencode }}&prov={{ prov|urlencode }}&page={{ page_obj.next_page_number }}">Siguiente</a>
+        <a href="?q={{ q|urlencode }}&prov={{ prov|urlencode }}&page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
+      {% else %}
+        <span>Siguiente</span><span>Último</span>
+      {% endif %}
+    {% endwith %}
   </div>
 {% endif %}
 
@@ -182,8 +188,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'cartera/app.js' %}"></script>
 <script>
+/* LÓGICA DE SELECCIÓN POR LOTE (sin filtros en el DOM) */
 document.addEventListener('DOMContentLoaded', () => {
   const tbl      = document.getElementById('tabla-facturas');
   const panel    = document.getElementById('panel-lote');

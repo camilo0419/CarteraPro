@@ -58,7 +58,6 @@
             <span class="badge wait">Pendiente</span>
           {% endif %}
         </td>
-
       </tr>
       {% empty %}
       <tr><td colspan="7">Sin pagos registrados.</td></tr>
@@ -69,25 +68,25 @@
 
 {% if is_paginated %}
 <div class="pagination">
-  {% if page_obj.has_previous %}
-    <a href="?page=1">&laquo; Primero</a>
-    <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-  {% else %}
-    <span>Primero</span><span>Anterior</span>
-  {% endif %}
-  <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-    <a href="?page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
-  {% else %}
-    <span>Siguiente</span><span>Último</span>
-  {% endif %}
+  {% with q=request.GET.q|default_if_none:'' %}
+    {% if page_obj.has_previous %}
+      <a href="?q={{ q|urlencode }}&page=1">&laquo; Primero</a>
+      <a href="?q={{ q|urlencode }}&page={{ page_obj.previous_page_number }}">Anterior</a>
+    {% else %}
+      <span>Primero</span><span>Anterior</span>
+    {% endif %}
+    <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?q={{ q|urlencode }}&page={{ page_obj.next_page_number }}">Siguiente</a>
+      <a href="?q={{ q|urlencode }}&page={{ page_obj.paginator.num_pages }}">Último &raquo;</a>
+    {% else %}
+      <span>Siguiente</span><span>Último</span>
+    {% endif %}
+  {% endwith %}
 </div>
 {% endif %}
 
 <p><a class="button warning" href="{% url 'dashboard' %}">← Volver al resumen</a></p>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'cartera/app.js' %}"></script>
-{% endblock %}
+{% block extra_js %}{% endblock %}

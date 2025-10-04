@@ -16,7 +16,7 @@ from django.utils.dateparse import parse_date
 from django.views.generic import (
     TemplateView, CreateView, ListView, DetailView, UpdateView, View
 )
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -74,69 +74,86 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return ctx
 
 
-# ---------------------- facturas ----------------------
-class FacturaPendientesView(LoginRequiredMixin, ListView):
-    model = Factura
-    template_name = 'cartera/facturas_pendientes.html'
-    context_object_name = 'facturas'
-    paginate_by = 25
+# ---------------------- facturas pendientes ----------------------
+# =========================
+# FACTURAS PENDIENTES (FBV)
+# =========================
+def facturas_pendientes_view(request):
+    q     = (request.GET.get('q') or '').strip()
+    prov  = (request.GET.get('prov') or '').strip()
+    page  = request.GET.get('page')
+    PER_PAGE = 50
 
-    # guardamos q y prov para reusarlos en get_context_data
-    def _get_params(self):
-        q = (self.request.GET.get('q') or '').strip()
-        prov = (self.request.GET.get('prov') or '').strip()
-        return q, prov
+    # 1) Base: todas las pendientes (respetando PDV del usuario si aplica)
+    qs = (Factura.objects
+          .filter(estado='pendiente')
+          .select_related('proveedor', 'punto_venta')
+          .order_by('-fecha_factura', '-id'))
 
-    def get_queryset(self):
-        q, prov = self._get_params()
-        qs = (Factura.objects
-              .filter(estado='pendiente')
-              .select_related('proveedor', 'punto_venta')
-              .order_by('-fecha_factura', '-id'))
+    pv = get_user_pdv(request.user)
+    if pv:
+        qs = qs.filter(punto_venta=pv)
 
-        # por punto de venta del usuario (si aplica)
-        pv = get_user_pdv(self.request.user)
-        if pv:
-            qs = qs.filter(punto_venta=pv)
+    # 2) Filtro por proveedor (desde el resumen)
+    if prov.isdigit():
+        qs = qs.filter(proveedor_id=int(prov))
 
-        # filtro de búsqueda
-        if q:
-            qs = qs.filter(
-                models.Q(proveedor__nombre__icontains=q) |
-                models.Q(punto_venta__nombre__icontains=q) |
-                models.Q(numero_factura__icontains=q)
-            )
-
-        # filtro por proveedor
-        if prov.isdigit():
-            qs = qs.filter(proveedor_id=int(prov))
-
-        return qs
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        q, prov = self._get_params()
-        ctx['q'] = q
-        ctx['prov_id'] = prov if prov.isdigit() else ''
-        ctx['prov_nombre'] = ''
-        if ctx['prov_id']:
-            ctx['prov_nombre'] = (Proveedor.objects
-                                  .filter(pk=ctx['prov_id'])
-                                  .values_list('nombre', flat=True)
-                                  .first() or '')
-
-        # (opcional) si quieres que el resumen muestre el resultado filtrado actual:
-        qs = self.get_queryset()
-        ctx['resumen_por_proveedor'] = (
-            qs.values('proveedor__id','proveedor__nombre')
-              .annotate(facturas=Count('id'),
-                        total=Sum(F('valor_factura') - F('total_pagado')))
-              .order_by('proveedor__nombre')
+    # 3) Búsqueda SIEMPRE sobre el queryset completo
+    if q:
+        qs = qs.filter(
+            Q(proveedor__nombre__icontains=q) |
+            Q(punto_venta__nombre__icontains=q) |
+            Q(numero_factura__icontains=q)
         )
-        ctx['total_general_pendiente'] = (
-            qs.aggregate(t=Sum(F('valor_factura') - F('total_pagado')))['t'] or 0
-        )
-        return ctx
+        # >>> SIN PAGINACIÓN cuando hay búsqueda
+        facturas = list(qs)
+        is_paginated = False
+        page_obj = None
+    else:
+        # >>> CON PAGINACIÓN (50) cuando NO hay búsqueda
+        paginator = Paginator(qs, PER_PAGE)
+        try:
+            facturas = paginator.page(page)
+        except PageNotAnInteger:
+            facturas = paginator.page(1)
+        except EmptyPage:
+            facturas = paginator.page(paginator.num_pages)
+        is_paginated = True
+        page_obj = facturas  # en Django, la 'page' es el page_obj
+
+    # 4) Resumen y total con el MISMO queryset (sin afectar por paginación)
+    resumen_por_proveedor = (
+        qs.values('proveedor__id', 'proveedor__nombre')
+          .annotate(
+              facturas=Count('id'),
+              total=Sum(F('valor_factura') - F('total_pagado'))
+          )
+          .order_by('proveedor__nombre')
+    )
+    total_general_pendiente = qs.aggregate(
+        t=Sum(F('valor_factura') - F('total_pagado'))
+    )['t'] or 0
+
+    # Para mostrar nombre del proveedor si viene por id
+    prov_nombre = ''
+    if prov.isdigit():
+        prov_nombre = (Proveedor.objects
+                       .filter(pk=int(prov))
+                       .values_list('nombre', flat=True)
+                       .first() or '')
+
+    ctx = {
+        'facturas': facturas,
+        'is_paginated': is_paginated,
+        'page_obj': page_obj,
+        'q': q,
+        'prov_id': prov if prov.isdigit() else '',
+        'prov_nombre': prov_nombre,
+        'resumen_por_proveedor': resumen_por_proveedor,
+        'total_general_pendiente': total_general_pendiente,
+    }
+    return render(request, 'cartera/facturas_pendientes.html', ctx)
+
 
 
 def _es_contado_por_notas(pago):
@@ -253,47 +270,67 @@ class FacturaCreateView(LoginRequiredMixin, CreateView):
 
 
 
-# ---------------------- pagos ----------------------
-class PagosListView(LoginRequiredMixin, ListView):
-    model = Pago
-    template_name = 'cartera/pagos_list.html'
-    context_object_name = 'pagos'
-    paginate_by = 25
+# ---------------------- pagos (lista) ----------------------
+# ==============
+# PAGOS (FBV)
+# ==============
+def pagos_list_view(request):
+    q    = (request.GET.get('q') or '').strip()
+    page = request.GET.get('page')
+    PER_PAGE = 50
 
-    def get_queryset(self):
-        qs = (Pago.objects
-              .select_related('factura', 'factura__proveedor', 'factura__punto_venta')
-              .order_by('-fecha_pago', '-id'))
+    # 1) Base: todos los pagos (respetando PDV del usuario si aplica)
+    qs = (Pago.objects
+          .select_related('factura', 'factura__proveedor', 'factura__punto_venta')
+          .order_by('-fecha_pago', '-id'))
 
-        pv = get_user_pdv(self.request.user)
-        if pv:
-            qs = qs.filter(factura__punto_venta=pv)
+    pv = get_user_pdv(request.user)
+    if pv:
+        qs = qs.filter(factura__punto_venta=pv)
 
-        # --- BÚSQUEDA GLOBAL ---
-        q = (self.request.GET.get('q') or '').strip()
-        if q:
-            qnum = q.replace('.', '').replace(',', '')
-            num_q = Q()
-            if qnum.isdigit():
-                try:
-                    n = Decimal(qnum)
-                    num_q = Q(valor_pagado=n)
-                except Exception:
-                    pass
+    # 2) Búsqueda global sobre TODO el queryset (sin paginar todavía)
+    if q:
+        qnum = q.replace('.', '').replace(',', '')
+        num_q = Q()
+        if qnum.isdigit():
+            try:
+                num_q = Q(valor_pagado=Decimal(qnum))
+            except Exception:
+                pass
 
-            qs = qs.filter(
-                Q(factura__numero_factura__icontains=q) |
-                Q(factura__proveedor__nombre__icontains=q) |
-                Q(factura__punto_venta__nombre__icontains=q) |
-                Q(pagado_por__icontains=q) |
-                Q(notas__icontains=q) |
-                num_q
-            )
+        qs = qs.filter(
+            Q(factura__numero_factura__icontains=q) |
+            Q(factura__proveedor__nombre__icontains=q) |
+            Q(factura__punto_venta__nombre__icontains=q) |
+            Q(pagado_por__icontains=q) |
+            Q(notas__icontains=q) |
+            num_q
+        )
+        # >>> SIN PAGINACIÓN cuando hay búsqueda
+        pagos = list(qs)
+        is_paginated = False
+        page_obj = None
+    else:
+        # >>> CON PAGINACIÓN (50) cuando NO hay búsqueda
+        paginator = Paginator(qs, PER_PAGE)
+        try:
+            pagos = paginator.page(page)
+        except PageNotAnInteger:
+            pagos = paginator.page(1)
+        except EmptyPage:
+            pagos = paginator.page(paginator.num_pages)
+        is_paginated = True
+        page_obj = pagos
 
-        return qs
-
-
-
+    ctx = {
+        'pagos': pagos,
+        'is_paginated': is_paginated,
+        'page_obj': page_obj,
+        'q': q,
+    }
+    return render(request, 'cartera/pagos_list.html', ctx)
+    
+    
 # ---------------------- pagos (individual) ----------------------
 class PagoCreateView(LoginRequiredMixin, CreateView):
     model = Pago

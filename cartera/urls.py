@@ -14,12 +14,12 @@ urlpatterns = [
 
     # Facturas
     path('facturas/nueva/', views.FacturaCreateView.as_view(), name='factura_create'),
-    path('facturas/pendientes/', views.FacturaPendientesView.as_view(), name='facturas_pendientes'),
+    path('facturas/pendientes/', views.facturas_pendientes_view, name='facturas_pendientes'),
     path('facturas/<int:pk>/', views.FacturaDetalleView.as_view(), name='factura_detalle'),
     path('facturas/<int:pk>/editar/', views.FacturaUpdateView.as_view(), name='factura_update'),
 
     # Pagos
-    path('pagos/', views.PagosListView.as_view(), name='pagos_list'),
+    path('pagos/', views.pagos_list_view, name='pagos_list'),
     path('facturas/<int:pk>/pagar/', views.PagoCreateView.as_view(), name='pago_create'),
 
     # API
