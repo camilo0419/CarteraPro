@@ -11,7 +11,7 @@
     <span class="badge">CarteraPro</span>
   </h1>
 
-  <!-- Filtros -->
+  <!-- ===== Filtros ===== -->
   <form method="get" class="filters">
     <div class="field">
       <label for="f-pdv">Punto de venta</label>
@@ -60,63 +60,148 @@
     </div>
   </form>
 
-  <!-- KPIs (4 por fila) -->
+  <!-- ===== Estilos locales: grid y tooltips KPI ===== -->
+  <style>
+    .cards{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px}
+    @media(max-width:1024px){.cards{grid-template-columns:repeat(2,minmax(220px,1fr))}}
+    @media(max-width:640px){.cards{grid-template-columns:1fr}}
+
+    .card{position:relative;background:#fff;border:1px solid var(--border);
+          border-radius:14px;padding:16px 16px 18px}
+    .k{font-size:12px;color:#7a7a7a}
+    .v{font-size:28px;font-weight:800;margin-top:4px}
+
+    /* Botón “ⓘ” sin óvalo */
+    .kpi-info{
+      position:absolute;top:8px;right:10px;
+      background:transparent;border:none;padding:0;margin:0;
+      font-size:16px;line-height:1;color:#F57C00;cursor:help;
+    }
+    .kpi-info:hover,.kpi-info:focus{color:#d36700;outline:none}
+
+    /* Tooltip */
+    .kpi-info[data-tip]::after{
+      content:attr(data-tip);position:absolute;top:22px;right:0;
+      min-width:220px;max-width:320px;padding:10px 12px;
+      background:#1f1f1f;color:#fff;font-size:12px;line-height:1.35;
+      border-radius:10px;box-shadow:0 10px 20px rgba(0,0,0,.18);
+      opacity:0;pointer-events:none;transform:translateY(-4px);
+      transition:all .16s ease;z-index:50;white-space:normal
+    }
+    .kpi-info[data-tip]::before{
+      content:"";position:absolute;top:16px;right:6px;width:8px;height:8px;
+      background:#1f1f1f;transform:rotate(45deg);opacity:0;transition:all .16s ease
+    }
+    .kpi-info:hover::after,.kpi-info:focus::after{opacity:1;transform:translateY(0)}
+    .kpi-info:hover::before,.kpi-info:focus::before{opacity:1}
+  </style>
+
+  <!-- ===== KPIs (4 por fila) ===== -->
   <div class="cards">
-    <div class="card"><div class="k">Total compras</div>
-      <div class="v">$<span class="money-es" data-v="{{ kpi_total|floatformat:0|default:'0' }}">{{ kpi_total|floatformat:0 }}</span></div></div>
+    <div class="card">
+      <div class="k">Total compras</div>
+      <button class="kpi-info" type="button" aria-label="Ayuda"
+              data-tip="Suma de valor_factura dentro del rango seleccionado.">ⓘ</button>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_total|floatformat:0|default:'0' }}">{{ kpi_total|floatformat:0 }}</span></div>
+    </div>
 
-    <div class="card"><div class="k">Facturas</div>
-      <div class="v">{{ kpi_facturas|default:"0" }}</div></div>
+    <div class="card">
+      <div class="k">Facturas</div>
+      <button class="kpi-info" type="button" data-tip="Número de facturas en el rango elegido.">ⓘ</button>
+      <div class="v">{{ kpi_facturas|default:"0" }}</div>
+    </div>
 
-    <div class="card"><div class="k">Pagado</div>
-      <div class="v">$<span class="money-es" data-v="{{ kpi_pagado|floatformat:0|default:'0' }}">{{ kpi_pagado|floatformat:0 }}</span></div></div>
+    <div class="card">
+      <div class="k">Pagado</div>
+      <button class="kpi-info" type="button" data-tip="Suma de valor_pagado de las facturas del período filtrado.">ⓘ</button>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_pagado|floatformat:0|default:'0' }}">{{ kpi_pagado|floatformat:0 }}</span></div>
+    </div>
 
-    <div class="card"><div class="k">Prom. días pago</div>
-      <div class="v">{{ kpi_dias|default:"0" }}</div></div>
+    <div class="card">
+      <div class="k">Prom. días pago</div>
+      <button class="kpi-info" type="button" data-tip="Días promedio entre fecha de factura y fecha de pago (solo facturas con pago).">ⓘ</button>
+      <div class="v">{{ kpi_dias|default:"0" }}</div>
+    </div>
 
-    <div class="card"><div class="k">Valor pendiente</div>
-      <div class="v">$<span class="money-es" data-v="{{ kpi_valor_pendiente|floatformat:0|default:'0' }}">{{ kpi_valor_pendiente|floatformat:0 }}</span></div></div>
+    <div class="card">
+      <div class="k">Valor pendiente</div>
+      <button class="kpi-info" type="button" data-tip="Suma del saldo de todas las facturas pendientes. Ignora el rango; respeta PDV/Proveedor.">ⓘ</button>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_valor_pendiente|floatformat:0|default:'0' }}">{{ kpi_valor_pendiente|floatformat:0 }}</span></div>
+    </div>
 
-    <div class="card"><div class="k"># Pendientes</div>
-      <div class="v">{{ kpi_num_pendientes|default:"0" }}</div></div>
+    <div class="card">
+      <div class="k"># Pendientes</div>
+      <button class="kpi-info" type="button" data-tip="Cantidad de facturas pendientes. Ignora el rango; respeta PDV/Proveedor.">ⓘ</button>
+      <div class="v">{{ kpi_num_pendientes|default:"0" }}</div>
+    </div>
 
-    <div class="card"><div class="k">% Pagado vs Compras</div>
-      <div class="v">{{ kpi_pct_pagado|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">% Pagado vs Compras</div>
+      <button class="kpi-info" type="button" data-tip="Relación de lo pagado frente al total de compras del período.">ⓘ</button>
+      <div class="v">{{ kpi_pct_pagado|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">% Pagos contado</div>
-      <div class="v">{{ kpi_pct_contado|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">% Pagos contado</div>
+      <button class="kpi-info" type="button" data-tip="Porcentaje de pagos del período que fueron 'contado en PDV'.">ⓘ</button>
+      <div class="v">{{ kpi_pct_contado|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">Tasa confirmación</div>
-      <div class="v">{{ kpi_tasa_conf|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">Tasa confirmación</div>
+      <button class="kpi-info" type="button" data-tip="Entre facturas con pago en el período, porcentaje confirmadas por el proveedor.">ⓘ</button>
+      <div class="v">{{ kpi_tasa_conf|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">Cobertura comprobantes</div>
-      <div class="v">{{ kpi_cob_comp|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">Cobertura comprobantes</div>
+      <button class="kpi-info" type="button" data-tip="Porcentaje de pagos del período con comprobante adjunto.">ⓘ</button>
+      <div class="v">{{ kpi_cob_comp|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">Top proveedor (share)</div>
-      <div class="v">{{ kpi_share_top1|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">Top proveedor (share)</div>
+      <button class="kpi-info" type="button" data-tip="Participación del proveedor con más compras en el período.">ⓘ</button>
+      <div class="v">{{ kpi_share_top1|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">Top 3 (share)</div>
-      <div class="v">{{ kpi_share_top3|default:"0" }}%</div></div>
+    <div class="card">
+      <div class="k">Top 3 (share)</div>
+      <button class="kpi-info" type="button" data-tip="Participación conjunta de los 3 proveedores líderes del período.">ⓘ</button>
+      <div class="v">{{ kpi_share_top3|default:"0" }}%</div>
+    </div>
 
-    <div class="card"><div class="k">Δ vs mes anterior</div>
+    <div class="card">
+      <div class="k">Δ vs mes anterior</div>
+      <button class="kpi-info" type="button" data-tip="Variación % del mes actual vs mes anterior (solo cuando el rango es 'Mes actual').">ⓘ</button>
       <div class="v">
         {% if kpi_delta_mes_ant is not None %}
           {{ kpi_delta_mes_ant }}% &nbsp;
           <small class="muted">($<span class="money-es" data-v="{{ kpi_delta_monto|floatformat:0|default:'0' }}">{{ kpi_delta_monto|floatformat:0 }}</span>)</small>
         {% else %} — {% endif %}
-      </div></div>
+      </div>
+    </div>
 
-    <div class="card"><div class="k">Nuevas (7 días)</div>
-      <div class="v">{{ kpi_nuevas_7d|default:"0" }}</div></div>
+    <div class="card">
+      <div class="k">Nuevas (7 días)</div>
+      <button class="kpi-info" type="button" data-tip="Facturas creadas en los últimos 7 días (independiente del rango; respeta PDV/Proveedor).">ⓘ</button>
+      <div class="v">{{ kpi_nuevas_7d|default:"0" }}</div>
+    </div>
 
-    <div class="card"><div class="k">Antigüedad prom. (pend.)</div>
-      <div class="v">{{ kpi_antig_pend|default:"0" }}</div></div>
+    <div class="card">
+      <div class="k">Antigüedad prom. (pend.)</div>
+      <button class="kpi-info" type="button" data-tip="Promedio de días desde la fecha de cada factura pendiente hasta hoy. Ignora el rango.">ⓘ</button>
+      <div class="v">{{ kpi_antig_pend|default:"0" }}</div>
+    </div>
 
-    <div class="card"><div class="k">Ticket prom. (pend.)</div>
-      <div class="v">$<span class="money-es" data-v="{{ kpi_ticket_pend|floatformat:0|default:'0' }}">{{ kpi_ticket_pend|floatformat:0 }}</span></div></div>
+    <div class="card">
+      <div class="k">Ticket prom. (pend.)</div>
+      <button class="kpi-info" type="button" data-tip="Saldo promedio por factura pendiente (Total pendiente / # pendientes). Ignora el rango.">ⓘ</button>
+      <div class="v">$<span class="money-es" data-v="{{ kpi_ticket_pend|floatformat:0|default:'0' }}">{{ kpi_ticket_pend|floatformat:0 }}</span></div>
+    </div>
   </div>
 
-  <!-- Gráficas -->
+  <!-- ===== Gráficas ===== -->
   <div class="table-card" style="padding:14px; margin-top:16px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <b>Top Proveedores</b>
@@ -193,21 +278,25 @@ function go(patch){
   window.location.replace(url.toString());
 }
 
-/* Filtros dinámicos */
+/* Filtros dinámicos (mes actual por defecto) */
 (function(){
   const params = new URLSearchParams(location.search);
   const rangoSel = $('f-rango');
   rangoSel.value = params.get('rango') || 'mes_actual';
+
   $('f-pdv').addEventListener('change', e => go({ pdv: e.target.value || null }));
   $('f-prov').addEventListener('change', e => go({ prov: e.target.value || null }));
+
   rangoSel.addEventListener('change', e => {
     const r = e.target.value; if (r === 'personalizado') return;
     const { d1, d2 } = rangeDates(r); go({ rango: r, d1, d2 });
   });
+
   $('f-d2').addEventListener('change', () => {
     const d1 = $('f-d1').value, d2 = $('f-d2').value;
     if (d1 && d2) go({ rango:'personalizado', d1, d2 });
   });
+
   const sync=()=>{ $('f-d2').min=$('f-d1').value||''; $('f-d1').max=$('f-d2').value||''; };
   $('f-d1').addEventListener('change', sync); $('f-d2').addEventListener('change', sync); sync();
 })();
@@ -245,7 +334,7 @@ const TOP_PROV = JSON.parse('{{ top_prov_json|escapejs }}');
 const POR_PDV  = JSON.parse('{{ por_pdv_json|escapejs }}');
 const BY_MONTH = JSON.parse('{{ by_month_json|escapejs }}');
 
-/* Gráficas (igual a la versión previa) */
+/* Gráficas */
 (function(){
   if(!TOP_PROV.length) return;
   const isMobile=window.matchMedia('(max-width:768px)').matches;
