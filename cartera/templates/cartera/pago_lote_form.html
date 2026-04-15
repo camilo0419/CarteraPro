@@ -47,32 +47,33 @@
     </table>
   </div>
 
-  <!-- Campos del formulario con estilos unificados -->
-  <div class="form-grid">
-    <div class="form-field">
-      {{ form.fecha_pago.label_tag }}
-      {{ form.fecha_pago }}
+  <div class="table-card form-card">
+    <div class="form-grid">
+      <div class="field">
+        {{ form.fecha_pago.label_tag }}
+        {{ form.fecha_pago }}
+      </div>
+
+      <div class="field">
+        {{ form.pagado_por.label_tag }}
+        {{ form.pagado_por }}
+      </div>
+
+      <div class="field span-2">
+        {{ form.comprobante.label_tag }}
+        {{ form.comprobante }}
+      </div>
+
+      <div class="field span-2">
+        {{ form.notas.label_tag }}
+        {{ form.notas }}
+      </div>
     </div>
 
-    <div class="form-field">
-      {{ form.pagado_por.label_tag }}
-      {{ form.pagado_por }}
+    <div class="actions-inline wrap-gap top-space" style="justify-content:flex-end;">
+      <a href="{% url 'facturas_pendientes' %}" class="button ghost">Cancelar</a>
+      <button type="submit" class="button warning">Registrar y enviar correo</button>
     </div>
-
-    <div class="form-field col-span-2">
-      {{ form.comprobante.label_tag }}
-      {{ form.comprobante }}
-    </div>
-
-    <div class="form-field col-span-2">
-      {{ form.notas.label_tag }}
-      {{ form.notas }}
-    </div>
-  </div>
-
-  <div class="actions-right" style="margin-top:12px;">
-    <a href="{% url 'facturas_pendientes' %}" class="button ghost">Cancelar</a>
-    <button type="submit" class="button warning">Registrar y enviar correo</button>
   </div>
 </form>
 {% endblock %}

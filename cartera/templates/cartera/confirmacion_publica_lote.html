@@ -1,3 +1,4 @@
+{% load static %}
 {% load formatting %}
 <!doctype html>
 <html lang="es">
@@ -5,6 +6,13 @@
   <meta charset="utf-8">
   <title>Pago confirmado</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'cartera/img/favicon-32.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'cartera/img/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'cartera/img/favicon-32.png' %}">
+  <link rel="shortcut icon" href="{% static 'cartera/img/favicon-32.png' %}">
+  <meta name="theme-color" content="#C62828">
+
   <style>
     body{margin:0;padding:24px;background:#FFF7E6;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#1F1F1F}
     .card{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.04)}

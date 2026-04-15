@@ -14,22 +14,14 @@
     .h1{font-size:20px;margin:10px 0 0}
     .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #FFE1B3;background:#FFF5E6;color:#F57C00;font-size:12px}
     .content{padding:20px 22px}
-
-    /* Card tabla */
     .card{border:1px solid #EDE7DA;border-radius:12px;overflow:hidden;margin-top:12px}
     .card-h{background:#FFF5E6;border-bottom:1px solid #F0E6D6;padding:10px 14px;font-weight:800;color:#7A4C00}
     .card-b{padding:12px 14px}
-
     .table{width:100%;border-collapse:collapse;table-layout:fixed}
     .table th,.table td{padding:10px 6px;border-top:1px solid #F0F0F0;text-align:left}
     .table th{background:#FAFAFA;color:#444;font-weight:600;border-top:none}
     .table td strong{color:#000}
-
-    .btn{display:inline-block;padding:12px 18px;background:#C62828;color:#fff !important;text-decoration:none;border-radius:10px;font-weight:700}
-    .btn-wrap{text-align:center;margin:26px 0 10px}
-
     .footer{padding:16px 22px;border-top:1px solid #E5E5E5;color:#666;font-size:12px}
-
     @media (max-width:480px){
       .content,.header,.footer{padding:16px}
       .table th,.table td{font-size:14px}
@@ -40,7 +32,7 @@
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <table width="100%" role="presentation">
+        <table width="100%" role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td class="brand">Inversiones<br>Fogón &amp; Leña</td>
             <td style="text-align:right"><span class="pill">Cartera</span></td>
@@ -53,11 +45,10 @@
         <p>Hola <strong>{{ proveedor.nombre }}</strong>,</p>
         <p>Adjuntamos el comprobante del pago por lote. Detalle de facturas incluidas:</p>
 
-        <!-- Tarjeta con tabla -->
         <div class="card">
           <div class="card-h">Facturas incluidas</div>
           <div class="card-b">
-            <table class="table" role="presentation">
+            <table class="table" role="presentation" cellpadding="0" cellspacing="0" border="0">
               <thead>
                 <tr>
                   <th style="width:40%">Factura</th>
@@ -82,12 +73,16 @@
           </div>
         </div>
 
-        <!-- Botón centrado -->
-        <div class="btn-wrap">
-          <a class="btn" href="{{ url_confirmacion }}" target="_blank" rel="noopener">
-            Confirmar recepción del pago de lote
-          </a>
-        </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 6px;">
+          <tr>
+            <td bgcolor="#C62828" style="border-radius:10px;">
+              <a href="{{ url_confirmacion }}" target="_blank" rel="noopener"
+                 style="display:inline-block;padding:12px 18px;font-weight:700;font-size:16px;line-height:1.2;color:#ffffff !important;text-decoration:none;background:#C62828;border:1px solid #C62828;border-radius:10px;">
+                Confirmar recepción del pago de lote
+              </a>
+            </td>
+          </tr>
+        </table>
       </div>
 
       <div class="footer">

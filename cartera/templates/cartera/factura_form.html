@@ -6,173 +6,188 @@
 {% block content %}
 <h1>{% if view.object %}Editar factura{% else %}Nueva factura{% endif %}</h1>
 
-{% if pv_usuario %}
-  <p style="margin-top:-6px;color:#555">
-    <strong>Punto de venta:</strong> {{ pv_usuario.nombre }}
-  </p>
-{% endif %}
-
-<div class="table-card" style="padding:16px;margin-top:12px;">
-  <form method="post" class="js-progress-on-submit" novalidate>
+<div class="table-card form-card">
+  <form method="post" novalidate id="factura-form">
     {% csrf_token %}
+    {{ form.confirmar_valor_alto }}
 
     <style>
-      .form-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
-      @media (min-width:720px){ .form-grid{ grid-template-columns:1fr 1fr; } }
-      .form-field{ display:flex; flex-direction:column; gap:6px; }
-      .form-field label{ font-weight:600; color:#333; }
-      .form-field .help{ font-size:12px; color:#666; }
-      .form-field .errors{ font-size:12px; color:#c0392b; }
-      .form-field input[type="text"],
-      .form-field input[type="number"],
-      .form-field input[type="date"],
-      .form-field select,
-      .form-field textarea{
-        padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; outline:none;
-      }
-      .form-actions{ display:flex; gap:10px; align-items:center; margin-top:12px; justify-content:flex-end; }
-
       /* Integración visual Select2 */
-      .select2-container--default .select2-selection--single{
-        height:40px; border:1px solid var(--border); border-radius:10px;
+      .select2-container {
+        width: 100% !important;
       }
-      .select2-container .select2-selection--single .select2-selection__rendered{
-        line-height:38px; padding-left:10px;
-      }
-      .select2-container--default .select2-selection--single .select2-selection__arrow{
-        height:38px; right:8px;
-      }
-      .select2-results__option .prov-name{ font-weight:700; color:#1f1f1f; }
-      .select2-results__option .prov-mail{ display:block; font-size:12px; color:#666; }
 
-            /* Estilo para las opciones seleccionadas en el select2 */
+      .select2-container--default .select2-selection--single {
+        height: 46px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 44px;
+        padding-left: 12px;
+        color: var(--text);
+      }
+
+      .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 44px;
+        right: 8px;
+      }
+
+      .select2-dropdown {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .select2-search--dropdown {
+        padding: 8px;
+      }
+
+      .select2-search--dropdown .select2-search__field {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+
+      .select2-results__option .prov-name {
+        font-weight: 700;
+        color: #1f1f1f;
+      }
+
+      .select2-results__option .prov-mail {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        margin-top: 2px;
+      }
+
       .select2-results__option--highlighted {
-        background-color: #FFE1B3 !important; /* naranja claro */
-        color: #000 !important; /* texto negro para contraste */
+        background-color: #FFE1B3 !important;
+        color: #000 !important;
       }
 
-
-
+      .select2-container--default .select2-results__option--selected {
+        background: #fff5e6;
+      }
     </style>
 
     <div class="form-grid">
-      <!-- Proveedor -->
-      <div class="form-field">
-        <label for="{{ form.proveedor.id_for_label }}">Proveedor</label>
-        {{ form.proveedor }}
-        {% if form.proveedor.help_text %}<div class="help">{{ form.proveedor.help_text }}</div>{% endif %}
-        {% if form.proveedor.errors %}<div class="errors">{{ form.proveedor.errors }}</div>{% endif %}
-      </div>
-
-      <!-- Punto de venta -->
-      <div class="form-field">
-        <label for="{{ form.punto_venta.id_for_label }}">Punto de venta</label>
-        {{ form.punto_venta }}
-        {% if form.punto_venta.help_text %}<div class="help">{{ form.punto_venta.help_text }}</div>{% endif %}
-        {% if form.punto_venta.errors %}<div class="errors">{{ form.punto_venta.errors }}</div>{% endif %}
-      </div>
-
-      <!-- Número de factura -->
-      <div class="form-field">
-        <label for="{{ form.numero_factura.id_for_label }}">Número factura</label>
-        {{ form.numero_factura }}
-        {% if form.numero_factura.help_text %}<div class="help">{{ form.numero_factura.help_text }}</div>{% endif %}
-        {% if form.numero_factura.errors %}<div class="errors">{{ form.numero_factura.errors }}</div>{% endif %}
-      </div>
-
-      <!-- Fecha -->
-      <div class="form-field">
-        <label for="{{ form.fecha_factura.id_for_label }}">Fecha factura</label>
-        {{ form.fecha_factura }}
-        {% if form.fecha_factura.help_text %}<div class="help">{{ form.fecha_factura.help_text }}</div>{% endif %}
-        {% if form.fecha_factura.errors %}<div class="errors">{{ form.fecha_factura.errors }}</div>{% endif %}
-      </div>
-
-      <!-- Valor -->
-      <div class="form-field">
-        <label for="{{ form.valor_factura.id_for_label }}">Valor factura</label>
-        {{ form.valor_factura }}
-        {% if form.valor_factura.help_text %}<div class="help">{{ form.valor_factura.help_text }}</div>{% endif %}
-        {% if form.valor_factura.errors %}<div class="errors">{{ form.valor_factura.errors }}</div>{% endif %}
-      </div>
-
-      <!-- Estado -->
-      <div class="form-field">
-        <label for="{{ form.estado.id_for_label }}">Estado</label>
-        {{ form.estado }}
-        {% if form.estado.help_text %}<div class="help">{{ form.estado.help_text }}</div>{% endif %}
-        {% if form.estado.errors %}<div class="errors">{{ form.estado.errors }}</div>{% endif %}
-      </div>
+      {% for field in form.visible_fields %}
+        {% if field.name != 'confirmar_valor_alto' %}
+          <div class="field-block {% if field.name == 'proveedor' %}span-2{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="field-errors">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
     </div>
 
-    <div class="form-actions">
-      <a href="{% url 'facturas_pendientes' %}" class="button secondary">Cancelar</a>
+    <div class="actions-inline top-space">
+      <a class="button outline" href="{% url 'facturas_pendientes' %}">Cancelar</a>
       <button type="submit" class="button primary">Guardar</button>
     </div>
   </form>
 </div>
+{% endblock %}
 
 {% block extra_js %}
-  {# 1) jQuery (debe ir antes de Select2) #}
   <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
-  {# 2) Select2 CSS + JS #}
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
   <script>
-  (function () {
-    const num = document.getElementById('id_numero_factura');
+  (function(){
     const val = document.getElementById('id_valor_factura');
+    const confirmHidden = document.getElementById('id_confirmar_valor_alto');
+    const form = document.getElementById('factura-form');
+    const MAX = 10000000;
+    const ALERTA = Number("{{ alerta_valor_alto|default:'1000000' }}");
 
-    // ---------- Número de factura: máximo 15 ----------
-    if (num) {
-      num.setAttribute('maxlength', '15');
-      num.addEventListener('input', () => {
-        if (num.value.length > 15) num.value = num.value.slice(0, 15);
-      });
+    function unformat(s){
+      s = String(s || '').trim();
+      s = s.replace(/[^\d.,]/g, '');
+
+      if (s.endsWith('.00')) s = s.slice(0, -3);
+      if (s.endsWith(',00')) s = s.slice(0, -3);
+
+      return s.replace(/[^\d]/g, '');
     }
 
-    // ---------- Valor de factura: máscara de miles + tope 10'000.000 ----------
-    if (val) {
-      const MAX = 10000000;
-      const form = val.closest('form');
+    function formatMiles(digits){
+      digits = String(digits || '').replace(/^0+(?=\d)/, '');
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
 
+    if (val){
       val.setAttribute('type', 'text');
       val.setAttribute('inputmode', 'numeric');
       val.setAttribute('autocomplete', 'off');
 
-      const unformat = (s) => (s || '').replace(/\./g, '').replace(/[^\d]/g, '');
-      const formatMiles = (digits) => {
-        digits = String(digits || '').replace(/^0+(?=\d)/, '');
-        return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      };
+      const inicial = unformat(val.value);
+      val.value = inicial ? formatMiles(inicial) : '';
 
-      val.addEventListener('input', () => {
+      // Mientras edita: valor limpio
+      val.addEventListener('focus', () => {
         let raw = unformat(val.value);
-        if (raw === '') { val.value = ''; return; }
-        let n = parseInt(raw, 10) || 0;
-        if (n > MAX) n = MAX;
-        val.value = formatMiles(n);
+        val.value = raw ? String(parseInt(raw, 10) || 0) : '';
       });
 
-      if (form) {
-        form.addEventListener('submit', (e) => {
-          const n = parseInt(unformat(val.value), 10) || 0;
-          if (n > MAX) {
-            e.preventDefault();
-            alert("El valor máximo permitido es 10'000.000.");
-            return false;
-          }
-          val.value = String(n);
-        });
-      }
+      // Mientras escribe: solo dígitos, sin re-formateo agresivo
+      val.addEventListener('input', () => {
+        let raw = unformat(val.value);
+        if (!raw){
+          val.value = '';
+          return;
+        }
+        let n = parseInt(raw, 10) || 0;
+        if (n > MAX) n = MAX;
+        val.value = String(n);
+      });
+
+      // Al salir: se ve bonito con miles
+      val.addEventListener('blur', () => {
+        let raw = unformat(val.value);
+        if (!raw){
+          val.value = '';
+          return;
+        }
+        let n = parseInt(raw, 10) || 0;
+        if (n > MAX) n = MAX;
+        val.value = formatMiles(String(n));
+      });
     }
 
-    // ---------- Búsqueda dentro del MISMO select de Proveedor (Select2) ----------
-    // Requiere: jQuery y Select2 cargados (vía CDN arriba)
+    if (form && val){
+      form.addEventListener('submit', (e) => {
+        let n = parseInt(unformat(val.value), 10) || 0;
+
+        if (n > MAX){
+          e.preventDefault();
+          alert('El valor máximo permitido es 10.000.000.');
+          return false;
+        }
+
+        if (n > ALERTA && confirmHidden && confirmHidden.value !== '1'){
+          if (!confirm('Confirma que el valor de la factura es $' + n.toLocaleString('es-CO') + '.')){
+            e.preventDefault();
+            return false;
+          }
+          confirmHidden.value = '1';
+        }
+
+        val.value = String(n);
+      });
+    }
+
     function initSelect2Proveedor(){
       if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
-      var $sel = jQuery('#id_proveedor');
+
+      const $sel = jQuery('#id_proveedor');
       if (!$sel.length) return;
 
       $sel.select2({
@@ -185,11 +200,12 @@
         },
         templateResult: function (data) {
           if (!data.id) return data.text;
-          var txt = data.text || '';
-          var parts = txt.split(' - ');
-          var name = parts[0] || txt;
-          var mail = parts.slice(1).join(' - ') || '';
-          var el = document.createElement('div');
+          const txt = data.text || '';
+          const parts = txt.split(' - ');
+          const name = parts[0] || txt;
+          const mail = parts.slice(1).join(' - ') || '';
+
+          const el = document.createElement('div');
           el.innerHTML = '<span class="prov-name"></span>' + (mail ? '<span class="prov-mail"></span>' : '');
           el.querySelector('.prov-name').textContent = name;
           if (mail) el.querySelector('.prov-mail').textContent = mail;
@@ -200,14 +216,13 @@
         },
         matcher: function(params, data){
           if (!params.term || params.term.trim() === '') return data;
-          var term = params.term.toLowerCase();
-          var text = (data.text || '').toLowerCase();
+          const term = params.term.toLowerCase();
+          const text = (data.text || '').toLowerCase();
           return text.indexOf(term) > -1 ? data : null;
         }
       });
     }
 
-    // Inicializa cuando el DOM esté listo y tras confirmar que Select2 existe
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initSelect2Proveedor);
     } else {
@@ -215,6 +230,4 @@
     }
   })();
   </script>
-{% endblock %}
-
 {% endblock %}

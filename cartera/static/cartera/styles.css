@@ -2,74 +2,98 @@
   --brand-red: #c62828;
   --brand-amber: #ffb300;
   --brand-charcoal: #1f1f1f;
-  --brand-cream: #fff7e6;
+  --brand-cream: #f6f1ea;
   --text: #1a1a1a;
   --muted: #666;
   --ok: #2e7d32;
   --warn: #f57c00;
-  --border: #e5e5e5;
+  --border: #e6ddd2;
   --card: #ffffff;
 }
 
-/* Reset básico */
 * {
   box-sizing: border-box;
 }
+
 html {
   scroll-behavior: smooth;
 }
+
 body {
-  font-family: system-ui, Segoe UI, Arial, sans-serif;
   margin: 0;
+  font-family: system-ui, Segoe UI, Arial, sans-serif;
   background: var(--brand-cream);
   color: var(--text);
 }
 
-/* --- Layout global / contenedor --- */
-.container {
-  width: min(1280px, 92vw);
-  margin-inline: auto;
-  padding: 16px;
-}
-@media (min-width: 1600px) {
-  .container {
-    width: min(1400px, 88vw);
-  }
-}
-
-/* Titulares */
-h1,
-h2,
-h3 {
-  color: var(--brand-charcoal);
-  margin: 12px 0 8px;
-}
-h1 {
-  font-size: 28px;
-}
-h2 {
-  font-size: 22px;
-}
-
-/* Enlaces */
 a {
   color: #0a58ca;
   text-decoration: none;
 }
+
 a:hover {
   text-decoration: underline;
 }
 
-/* Separador del header */
-.hr {
-  height: 1px;
-  background: #efefef;
-  margin-top: 10px;
+.container {
+  width: min(1280px, 94vw);
+  margin-inline: auto;
+  padding: 16px;
 }
 
-/* ===================== */
-/*      BOTONES (UI)     */
-/* ===================== */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #eee;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo {
+  height: 64px;
+  max-width: 260px;
+  object-fit: contain;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 28px;
+}
+
+.user-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.desktop-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.main-content {
+  padding-bottom: 100px;
+}
+
 .button,
 button,
 .btn {
@@ -87,19 +111,6 @@ button,
   font-weight: 600;
   line-height: 1.2;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-  transition: transform 0.05s ease, box-shadow 0.2s ease, background 0.2s ease,
-    border-color 0.2s ease, opacity 0.2s ease;
-}
-.button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.button:active {
-  transform: translateY(0);
-}
-.button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .button.primary {
@@ -107,1546 +118,494 @@ button,
   color: #fff;
   border-color: var(--brand-red);
 }
-.button.secondary {
-  /* look claro */
-  background: #fff;
-  color: var(--brand-charcoal);
-  border-color: #cfcfcf;
+
+.button.warning,
+.btn {
+  background: var(--brand-amber);
+  border-color: var(--brand-amber);
+  color: #000;
 }
+
 .button.outline {
-  /* similar a ghost pero con borde sutil */
   background: #fff;
-  color: var(--brand-charcoal);
-  border-color: #d9d9d9;
 }
+
+.button.ghost {
+  background: #fff;
+}
+
 .button.danger {
   background: #c0392b;
   color: #fff;
   border-color: #c0392b;
 }
+
+.button.small {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .button.is-full {
   width: 100%;
-  justify-content: center;
 }
 
-/* Soporte para <button> nativo */
-button.button {
-  font: inherit;
-}
-
-/* Navbar responsive: botones a ancho completo en móvil */
-@media (max-width: 640px) {
-  nav .button {
-    width: 100%;
-  }
-}
-
-/* ===================== */
-/*     TOOLBAR / SEARCH  */
-/* ===================== */
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  margin: 10px 0 12px;
-}
-.search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.search input {
-  width: min(520px, 90vw);
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #fff;
-  outline: none;
-}
-.search .btn {
-  background: var(--brand-amber);
-  color: #000;
-  border-color: var(--brand-amber);
-}
-
-/* ===================== */
-/*     TABLA / CARD      */
-/* ===================== */
-.table-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-}
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-}
-thead th {
-  background: var(--brand-red);
-  color: #fff;
-  padding: 10px 12px;
-  text-align: left;
-  font-weight: 700;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-thead th:first-child {
-  border-top-left-radius: 12px;
-}
-thead th:last-child {
-  border-top-right-radius: 12px;
-}
-tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  background: #fff;
-}
-tbody tr:hover {
-  background: #fff5f2;
-}
-tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 12px;
-}
-tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 12px;
-}
-
-/* Alineaciones por columna (usa estas clases en el HTML) */
-th.col-count,
-td.col-count {
-  text-align: center;
-  width: 140px;
-}
-th.col-money,
-td.col-money {
-  text-align: right;
-  width: 220px;
-}
-
-/* Resaltado de selección (lotes) */
-.table-card table tbody tr.row-selected,
-.table-card table tbody tr.row-selected:hover {
-  background: #fff3e0 !important;
-  transition: background-color 0.15s ease;
-}
-.table-card table tbody tr.row-selected td:first-child {
-  border-left: 4px solid #ffb74d !important;
-}
-
-/* --- Tabla con 3 columnas iguales --- */
-.table-card table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed; /* fuerza distribución fija */
-}
-
-.table-card th,
-.table-card td {
-  width: 33.33%; /* las 3 columnas iguales */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* alineaciones específicas */
-.table-card th:first-child,
-.table-card td:first-child {
-  text-align: left;
-}
-
-.table-card th.col-count,
-.table-card td.col-count {
-  text-align: center;
-}
-
-.table-card th.col-money,
-.table-card td.col-money {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-
-/* ===================== */
-/*      DASHBOARD CARDS  */
-/* ===================== */
+/* Cards */
 .cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin: 16px 0;
-}
-@media (max-width: 1000px) {
-  .cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 560px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0 20px;
+  align-items: stretch;
 }
 
-.card {
+.card{
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-
-  /* Para centrar contenido interno */
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.04);
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.card .k {
-  color: var(--muted);
+.card .k{
   font-size: 13px;
-  margin-bottom: 6px;
+  color: var(--muted);
+  margin-bottom: 8px;
   text-align: center;
 }
 
-.card .v {
+.card .v{
+  font-size: 32px;
   font-weight: 800;
-  font-size: clamp(20px, 2.3vw, 24px);
-  flex: 1; /* ocupa el espacio disponible */
-  display: flex;
-  align-items: center; /* centro vertical */
-  justify-content: center; /* centro horizontal */
   text-align: center;
 }
 
-/* Card de acciones rápidas */
-.card-actions .row-actions {
+.stack-actions {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 10px;
 }
 
-/* badges y util (usadas en dashboard/otras vistas) */
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.dashboard-cards {
+  align-items: stretch;
+}
+
+/* Tables */
+.table-card {
+  background: var(--card);
   border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+thead th {
+  background: var(--brand-red);
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+tbody td,
+tfoot th,
+tfoot td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
   background: #fff;
 }
-.badge.ok {
-  background: #e9f7ef;
-  color: var(--ok);
-  border-color: #d2ead6;
-}
-.badge.wait {
-  background: #fff5e6;
-  color: var(--warn);
-  border-color: #ffe1b3;
+
+tfoot th,
+tfoot td {
+  background: #faf6f2;
+  font-weight: 800;
 }
 
-/* Paginación */
+tbody tr:hover td {
+  background: #fff9f1;
+}
+
+.col-count {
+  text-align: center;
+  width: 130px;
+}
+
+.col-money {
+  text-align: right;
+  width: 180px;
+}
+
+/* Forms */
+.form-card {
+  padding: 16px;
+}
+
+.form-grid,
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field-block,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.field input,
+.field select,
+.field textarea,
+.field-block input,
+.field-block select,
+.field-block textarea {
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  width: 100%;
+}
+
+.field-errors {
+  font-size: 12px;
+  color: #b00020;
+}
+
+.actions-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.wrap-gap {
+  flex-wrap: wrap;
+}
+
+.top-space {
+  margin-top: 14px;
+}
+
+/* Toolbars / panels */
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.filter-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.lote-panel {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: #fff8ec;
+  border: 1px solid #f1d8a6;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+/* Pagination */
 .pagination {
   display: flex;
   gap: 8px;
   align-items: center;
   justify-content: center;
-  margin: 14px 0;
+  flex-wrap: wrap;
+  margin: 16px 0;
 }
-.pagination a,
-.pagination span {
-  padding: 6px 10px;
-  border-radius: 8px;
+
+.pagination span,
+.pagination a {
+  padding: 8px 12px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: #fff;
 }
+
 .pagination .current {
-  background: var(--brand-amber);
-  border-color: var(--brand-amber);
-  color: #000;
   font-weight: 700;
 }
 
-/* ===== Overlay “Procesando…” (oculto por defecto) ===== */
-.progress-overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(2px);
-  z-index: 9999;
-}
-.progress-overlay.show {
-  display: grid;
-}
-.progress-box {
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px 18px;
-  min-width: 240px;
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-.progress-bar {
-  height: 6px;
-  width: 100%;
-  background: #eee;
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-.progress-bar > div {
-  height: 100%;
-  width: 30%;
-  background: linear-gradient(90deg, var(--brand-red), var(--brand-amber));
-  animation: slide 1s infinite ease-in-out;
-  border-radius: 999px;
-}
-@keyframes slide {
-  0% {
-    transform: translateX(-10%);
-  }
-  50% {
-    transform: translateX(80%);
-  }
-  100% {
-    transform: translateX(-10%);
-  }
-}
-
-/* ====== FACTURAS PENDIENTES: layout de toolbar ====== */
-.toolbar .left {
-  display: flex;
-  gap: 10px;
+/* Badges */
+.badge {
+  display: inline-flex;
   align-items: center;
-}
-.toolbar .right {
-  margin-left: auto;
-}
-
-/* ====== Tabla: anchos y alineación por columna ====== */
-.table-card th.col-check,
-.table-card td.col-check {
-  width: 44px;
-  text-align: center;
-}
-.table-card th.col-date,
-.table-card td.col-date {
-  width: 180px;
-  white-space: nowrap;
-}
-.table-card th.col-num,
-.table-card td.col-num {
-  width: 120px;
-  white-space: nowrap;
-}
-.table-card th.col-prov,
-.table-card td.col-prov {
-  width: auto;
-} /* ocupa el resto */
-.table-card th.col-pdv,
-.table-card td.col-pdv {
-  width: 160px;
-  white-space: nowrap;
-}
-.table-card th.col-money,
-.table-card td.col-money {
-  width: 140px;
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-.table-card th.col-actions,
-.table-card td.col-actions {
-  width: 120px;
-  text-align: center;
-}
-
-/* ====== Botones de acción como íconos ====== */
-.icon-btn {
-  --size: 36px;
-  display: inline-grid;
-  place-items: center;
-  width: var(--size);
-  height: var(--size);
+  padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--brand-charcoal);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 0.05s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-.icon-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.icon-btn.primary {
-  background: var(--brand-red);
-  border-color: var(--brand-red);
-  color: #fff;
-}
-.icon-btn.ghost {
-  background: #fff;
+  background: #f0f0f0;
+  color: #444;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-/* ====== Menú "..." sin JS (details/summary) ====== */
-.row-menu {
-  display: inline-block;
-  position: relative;
+.badge.ok {
+  background: #e8f5e9;
+  color: #1b5e20;
 }
-.row-menu > summary {
-  list-style: none;
-  cursor: pointer;
-  outline: 0;
+
+.badge.warn {
+  background: #fff3e0;
+  color: #ef6c00;
 }
-.row-menu > summary::-webkit-details-marker {
+
+/* Detail */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 14px;
+}
+
+.detail-card {
+  padding: 12px;
+}
+
+.info-stack {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+/* Alerts */
+.alert {
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+
+.alert.success {
+  background: #edf7ed;
+}
+
+.alert.error {
+  background: #ffefef;
+}
+
+.alert.warning {
+  background: #fff8e8;
+}
+
+.alert.info {
+  background: #eef6ff;
+}
+
+/* Dashboard providers */
+.mobile-provider-list {
   display: none;
 }
-.row-menu > summary .dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: #666;
+
+.desktop-provider-table {
   display: block;
-  box-shadow: 0 6px 0 #666, 0 -6px 0 #666;
 }
 
-.row-menu[open] > .menu {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-.row-menu .menu {
-  position: absolute;
-  right: 0;
-  top: 44px;
-  min-width: 180px;
-  padding: 6px;
+.provider-item {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-6px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
-  z-index: 20;
-}
-.row-menu .menu ul {
-  list-style: none;
-  margin: 0;
-  padding: 4px;
-}
-.row-menu .menu a {
-  display: block;
-  padding: 8px 10px;
-  border-radius: 10px;
-  color: inherit;
-  text-decoration: none;
-}
-.row-menu .menu a:hover {
-  background: #fff5e6;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 10px;
 }
 
-.toolbar {
-  width: 100%;
-  margin: 10px 0 12px;
+.provider-item__top {
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
-.toolbar .search {
-  flex: 1;
-}
-
-/* ======= FORM LAYOUT (común a todos los formularios) ======= */
-.form-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr;
-  margin: 12px 0;
-}
-@media (min-width: 760px) {
-  .form-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .form-field.col-span-2 {
-    grid-column: 1 / -1;
-  }
-}
-.form-field label {
-  display: block;
-  font-weight: 600;
-  color: var(--brand-charcoal);
-  margin-bottom: 6px;
-}
-.form-field input[type="text"],
-.form-field input[type="date"],
-.form-field input[type="number"],
-.form-field select,
-.form-field textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-}
-.form-field textarea {
-  min-height: 90px;
-  resize: vertical;
-}
-
-/* Alineación de acciones a la derecha (por consistencia) */
-.actions-right {
+.provider-item__meta {
   display: flex;
-  gap: 10px;
   align-items: center;
-  justify-content: flex-end;
-}
-
-/* Botón naranja (estilo Buscar) */
-.button.warning {
-  background: #f5a100; /* tu naranja */
-  border-color: #f5a100;
-  color: #000;
-}
-.button.warning:hover {
-  filter: brightness(0.97);
-}
-
-.site-footer {
-  background: var(--brand-charcoal, #1f1f1f);
-  color: #fff7e6;
-  padding: 14px 22px;
-  font-size: 14px;
-}
-
-.footer-container {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  text-align: center;
+  gap: 12px;
+  color: var(--muted);
 }
 
-.footer-center {
-  flex: 1;
-  text-align: center;
+.provider-item__meta strong {
+  color: var(--text);
+  font-size: 18px;
 }
 
-.footer-left,
-.footer-right {
-  flex: 1;
+.provider-item--total {
+  background: #faf6f2;
+  border-color: #e0d2c2;
 }
 
-.footer-left {
+/* Bottom nav */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .cards,
+  .form-grid,
+  .filters-grid,
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .span-2 {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 8px;
+    background: #d9ccbd;
+    border: 1px solid #d0c3b3;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    z-index: 50;
+  }
+
+  .bottom-nav__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 6px;
+    border-radius: 14px;
+    color: #222;
+    font-weight: 700;
+    font-size: 12px;
+    text-decoration: none;
+  }
+
+  .bottom-nav__item.active {
+    background: #fff;
+    color: #111;
+  }
+
+  .bottom-nav__item span {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .cards,
+  .form-grid,
+  .filters-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .span-2 {
+    grid-column: span 1;
+  }
+
+  .app-title {
+    font-size: 24px;
+  }
+
+  .brand-logo {
+    height: 54px;
+  }
+
+  .actions-inline {
+    flex-wrap: wrap;
+  }
+
+  .card .v {
+    font-size: 24px;
+  }
+
+  .desktop-provider-table {
+    display: none;
+  }
+
+  .mobile-provider-list {
+    display: block;
+  }
+
+  table {
+    min-width: 900px;
+  }
+}
+
+
+.card-actions{
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.card-actions .k{
   text-align: left;
 }
-.footer-right {
-  text-align: right;
+
+/* Fix final: centrar cards numéricas del dashboard */
+.dashboard-cards > .card:not(.card-actions){
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
 }
 
-/* ====== Filtros Analítica — barra horizontal (Grid) ====== */
-/* ===== Filtros Analítica (limpio, sin superposiciones) ===== */
-.filters {
-  display: flex;
-  flex-wrap: wrap; /* una fila; si no cabe, salta */
-  align-items: flex-end;
-  gap: 12px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  margin: 10px 0 14px;
-}
-
-.filters .field {
-  display: flex;
-  align-items: center; /* label + control en línea */
-  gap: 8px;
-}
-
-.filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  white-space: nowrap;
-  font-size: 14px;
-}
-
-.filters .field select,
-.filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: 0;
-  font-size: 14px;
-}
-
-.filters .field input[type="date"] {
-  width: 140px; /* controla el ancho del date */
-  max-width: 140px;
-}
-
-.filters .field select {
-  min-width: 170px;
-}
-
-/* Botones a la derecha */
-.filters .actions {
-  margin-left: auto;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .filters {
-    gap: 10px 12px;
-  }
-  .filters .field input[type="date"] {
-    width: 130px;
-    max-width: 130px;
-  }
-}
-@media (max-width: 560px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .filters .actions {
-    margin-left: 0;
-    justify-content: stretch;
-  }
-  .filters .actions .button {
-    flex: 1;
-  }
-}
-
-/* ===========================
-   HOTFIX: Filtros Analítica (Prod)
-   - Alinea y evita desbordes
-   - Botón "Limpiar" a la derecha
-   - Comportamiento fluido en móvil
-   =========================== */
-
-.filters {
-  display: flex !important; /* forzamos flex para prod */
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  align-items: flex-end;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-}
-
-.filters .field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* inputs cómodos pero sin crecer de más */
-.filters .field select,
-.filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-  min-width: 150px;
-  max-width: 230px; /* evita estiramientos raros */
-}
-
-/* Desktop: tamaños relativos de cada bloque */
-@media (min-width: 1100px) {
-  .filters .field:nth-child(1) {
-    flex: 1 1 260px;
-  } /* Punto de venta */
-  .filters .field:nth-child(2) {
-    flex: 2 1 420px;
-  } /* Proveedor */
-  .filters .field:nth-child(3) {
-    flex: 1 1 220px;
-  } /* Rango */
-  .filters .field:nth-child(4) {
-    flex: 0 0 190px;
-  } /* Desde */
-  .filters .field:nth-child(5) {
-    flex: 0 0 190px;
-  } /* Hasta */
-  .filters .actions {
-    margin-left: auto;
-  } /* botón a la derecha */
-}
-
-/* Móvil / tablet: una columna bonita */
-@media (max-width: 1099px) {
-  .filters .field {
-    flex: 1 1 320px;
-  } /* 2 por fila aprox */
-  .filters .actions {
-    flex: 1 1 100%;
-  } /* botón debajo y a ancho completo si quieres */
-  /* si prefieres botón normal en móvil, quita la línea de abajo */
-  /* .filters .actions .button{ width:100%; } */
-}
-
-/* ============================
-   Analytics – Filtros (v3)
-   Layout sólido en desktop y móvil
-   ============================ */
-
-.analytics .filters {
-  display: grid;
-  /* Cada bloque ocupa al menos 220px; si hay espacio, crece.
-     Esto evita saltos raros y superposiciones. */
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px 16px;
-  align-items: end;
-
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
-  margin: 10px 0 14px;
-}
-
-/* Cada field muestra label arriba y control abajo (más estable) */
-.analytics .filters .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0; /* evita desbordes dentro del grid */
-}
-
-.analytics .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  white-space: nowrap;
-  font-size: 14px;
-}
-
-.analytics .filters .field select,
-.analytics .filters .field input[type="date"] {
-  width: 100%; /* llena su celda */
-  height: 38px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-  min-width: 0; /* clave para que no rompan el grid */
-}
-
-/* Botón “Limpiar” siempre pegado a la derecha */
-.analytics .filters .actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-/* En pantallas muy angostas, el botón puede ocupar toda la fila */
-@media (max-width: 560px) {
-  .analytics .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* === PATCH ANALYTICS (add at the very end) === */
-
-/* Grid estable para filtros de Analítica */
-.filters.analytics {
-  display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px 16px;
-  align-items: end;
-}
-
-.filters.analytics .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.filters.analytics .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  white-space: nowrap;
-  font-size: 14px;
-}
-
-.filters.analytics .field select,
-.filters.analytics .field input[type="date"] {
-  width: 100%;
-  height: 38px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-  min-width: 0; /* evita desbordes */
-}
-
-/* Desktop: 4 + 4 + 2 + 1 + 1, acciones a la derecha */
-@media (min-width: 1100px) {
-  .filters.analytics .field.pdv {
-    grid-column: span 4;
-  }
-  .filters.analytics .field.prov {
-    grid-column: span 4;
-  }
-  .filters.analytics .field.rango {
-    grid-column: span 2;
-  }
-  .filters.analytics .field.d1 {
-    grid-column: span 1;
-  }
-  .filters.analytics .field.d2 {
-    grid-column: span 1;
-  }
-  .filters.analytics .actions {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-/* Tablet */
-@media (max-width: 1099px) {
-  .filters.analytics {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .filters.analytics .field {
-    grid-column: span 3;
-  }
-  .filters.analytics .actions {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-/* Móvil: una columna y botón full */
-@media (max-width: 560px) {
-  .filters.analytics {
-    grid-template-columns: 1fr;
-  }
-  .filters.analytics .field,
-  .filters.analytics .actions {
-    grid-column: 1 / -1;
-  }
-  .filters.analytics .actions .button {
-    width: 100%;
-  }
-}
-
-/* Charts: que nunca “estiren” la tarjeta */
-.table-card canvas {
+.dashboard-cards > .card:not(.card-actions) .k,
+.dashboard-cards > .card:not(.card-actions) .v{
   width: 100% !important;
-  display: block;
-}
-#topProveedores {
-  height: 280px !important;
-}
-#comprasPorPDV {
-  height: 320px !important;
-}
-#comprasMensuales {
-  height: 240px !important;
+  text-align: center !important;
 }
 
-@media (max-width: 640px) {
-  #topProveedores {
-    height: 300px !important;
-  }
-  #comprasPorPDV {
-    height: 340px !important;
-  }
-  #comprasMensuales {
-    height: 230px !important;
-  }
+.dashboard-cards > .card.card-actions{
+  align-items: stretch !important;
+  text-align: left !important;
 }
 
-/* ===========================
-   ANALYTICS (scope local)
-   =========================== */
-.analytics-scope .table-card canvas {
-  width: 100% !important;
-  display: block;
-}
-
-/* Alturas fijas: evitan "scroll infinito" y saltos */
-.analytics-scope #topProveedores {
-  height: 300px !important;
-}
-.analytics-scope #comprasPorPDV {
-  height: 320px !important;
-}
-.analytics-scope #comprasMensuales {
-  height: 240px !important;
-}
-
-@media (max-width: 640px) {
-  .analytics-scope #topProveedores {
-    height: 320px !important;
-  }
-  .analytics-scope #comprasPorPDV {
-    height: 340px !important;
-  }
-  .analytics-scope #comprasMensuales {
-    height: 230px !important;
-  }
-}
-
-/* Filtros: grid estable SOLO aquí (no toca otras pantallas) */
-.analytics-scope .filters {
-  display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px 16px;
-  align-items: end;
-}
-
-/* Usa el orden actual de tus .field */
-@media (min-width: 1100px) {
-  .analytics-scope .filters .field:nth-child(1) {
-    grid-column: span 4;
-  } /* PDV   */
-  .analytics-scope .filters .field:nth-child(2) {
-    grid-column: span 4;
-  } /* Proveedor */
-  .analytics-scope .filters .field:nth-child(3) {
-    grid-column: span 2;
-  } /* Rango */
-  .analytics-scope .filters .field:nth-child(4) {
-    grid-column: span 1;
-  } /* Desde */
-  .analytics-scope .filters .field:nth-child(5) {
-    grid-column: span 1;
-  } /* Hasta */
-  .analytics-scope .filters .actions {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
-    display: flex;
-  }
-}
-
-@media (max-width: 1099px) {
-  .analytics-scope .filters {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .analytics-scope .filters .field {
-    grid-column: span 3;
-  }
-  .analytics-scope .filters .actions {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 560px) {
-  .analytics-scope .filters {
-    grid-template-columns: 1fr;
-  }
-  .analytics-scope .filters .field,
-  .analytics-scope .filters .actions {
-    grid-column: 1 / -1;
-  }
-  .analytics-scope .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* Labels arriba y controles abajo para estabilidad visual */
-.analytics-scope .filters .field {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-}
-.analytics-scope .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  font-size: 14px;
-}
-.analytics-scope .filters .field select,
-.analytics-scope .filters .field input[type="date"] {
-  width: 100%;
-  height: 38px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-}
-/* =========================
-   ANALYTICS — Patch aislado
-   (añadir al final del CSS)
-   ========================= */
-.analytics-scope {
-  font-size: 14.5px;
-}
-
-.analytics-scope h1 {
-  font-size: 26px;
-  font-weight: 800;
-  margin: 6px 0 12px;
-}
-
-/* Filtros en grid estable */
-.analytics-scope .filters {
-  display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 10px 14px;
-  align-items: end;
-}
-
-.analytics-scope .filters .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.analytics-scope .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  font-size: 14px;
-}
-
-.analytics-scope .filters .field select,
-.analytics-scope .filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-  min-width: 0;
-}
-
-.analytics-scope .filters .actions {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Distribución desktop */
-@media (min-width: 1100px) {
-  .analytics-scope .filters .field:nth-child(1) {
-    grid-column: span 3;
-  } /* PDV */
-  .analytics-scope .filters .field:nth-child(2) {
-    grid-column: span 4;
-  } /* Proveedor */
-  .analytics-scope .filters .field:nth-child(3) {
-    grid-column: span 2;
-  } /* Rango */
-  .analytics-scope .filters .field:nth-child(4) {
-    grid-column: span 1;
-  } /* Desde */
-  .analytics-scope .filters .field:nth-child(5) {
-    grid-column: span 1;
-  } /* Hasta */
-}
-
-/* Móvil: una columna y botón full */
-@media (max-width: 720px) {
-  .analytics-scope .filters {
-    grid-template-columns: 1fr;
-  }
-  .analytics-scope .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* KPIs más compactos y con números tabulares */
-.analytics-scope .cards {
-  gap: 10px;
-}
-.analytics-scope .card .k {
-  font-size: 12px;
-}
-.analytics-scope .card .v {
-  font-size: clamp(18px, 2.1vw, 22px);
-  font-variant-numeric: tabular-nums;
-}
-
-/* CHARTS: tamaño controlado (sin scroll infinito) */
-.analytics-scope .table-card canvas {
-  width: 100% !important;
-  display: block;
-}
-.analytics-scope #topProveedores {
-  height: 320px !important;
-}
-.analytics-scope #comprasPorPDV {
-  height: 280px !important;
-}
-.analytics-scope #comprasMensuales {
-  height: 220px !important;
-}
-@media (max-width: 640px) {
-  .analytics-scope #topProveedores {
-    height: 360px !important;
-  }
-  .analytics-scope #comprasPorPDV {
-    height: 340px !important;
-  }
-  .analytics-scope #comprasMensuales {
-    height: 230px !important;
-  }
-}
-
-/* TABLA Top Facturas: anular la regla global de 33.33% */
-.analytics-scope .table-card h2 + table {
-  table-layout: auto;
-}
-.analytics-scope .table-card h2 + table th,
-.analytics-scope .table-card h2 + table td {
-  width: auto !important;
-  white-space: nowrap;
-}
-
-/* ===== Analytics: FIX distribución filtros y fechas (override minimal) ===== */
-
-/* Fechas: ancho cómodo + espacio para el icono del datepicker */
-.analytics-scope .filters .field input[type="date"] {
-  width: 170px; /* antes 140px → se cortaba */
-  min-width: 170px;
-  max-width: 200px;
-  padding-right: 28px; /* evita que el icono tape el texto */
-}
-
-/* Selects: que no se queden demasiado pequeños en desktop */
-.analytics-scope .filters .field select {
-  min-width: 220px;
-}
-
-/* Desktop: que el botón “Limpiar” quede en la MISMA fila a la derecha */
-@media (min-width: 1100px) {
-  .analytics-scope .filters .actions {
-    grid-column: 12 / 13 !important; /* ocupa la última columna del grid */
-    justify-content: flex-end;
-    align-self: end;
-  }
-}
-
-/* =========================
-   ANALYTICS — Patch aislado
-   (añadir al final del CSS)
-   ========================= */
-.analytics-scope {
-  font-size: 14.5px;
-}
-
-.analytics-scope h1 {
-  font-size: 26px;
-  font-weight: 800;
-  margin: 6px 0 12px;
-}
-
-/* Filtros en grid estable */
-.analytics-scope .filters {
-  display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 10px 14px;
-  align-items: end;
-}
-
-.analytics-scope .filters .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.analytics-scope .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  font-size: 14px;
-}
-
-.analytics-scope .filters .field select,
-.analytics-scope .filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  font-size: 14px;
-  min-width: 0;
-}
-
-.analytics-scope .filters .actions {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Distribución desktop */
-@media (min-width: 1100px) {
-  .analytics-scope .filters .field:nth-child(1) {
-    grid-column: span 3;
-  } /* PDV */
-  .analytics-scope .filters .field:nth-child(2) {
-    grid-column: span 4;
-  } /* Proveedor */
-  .analytics-scope .filters .field:nth-child(3) {
-    grid-column: span 2;
-  } /* Rango */
-  .analytics-scope .filters .field:nth-child(4) {
-    grid-column: span 1;
-  } /* Desde */
-  .analytics-scope .filters .field:nth-child(5) {
-    grid-column: span 1;
-  } /* Hasta */
-}
-
-/* Móvil: una columna y botón full */
-@media (max-width: 720px) {
-  .analytics-scope .filters {
-    grid-template-columns: 1fr;
-  }
-  .analytics-scope .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* KPIs más compactos y con números tabulares */
-.analytics-scope .cards {
-  gap: 10px;
-}
-.analytics-scope .card .k {
-  font-size: 12px;
-}
-.analytics-scope .card .v {
-  font-size: clamp(18px, 2.1vw, 22px);
-  font-variant-numeric: tabular-nums;
-}
-
-/* CHARTS: tamaño controlado (sin scroll infinito) */
-.analytics-scope .table-card canvas {
-  width: 100% !important;
-  display: block;
-}
-.analytics-scope #topProveedores {
-  height: 320px !important;
-}
-.analytics-scope #comprasPorPDV {
-  height: 280px !important;
-}
-.analytics-scope #comprasMensuales {
-  height: 220px !important;
-}
-@media (max-width: 640px) {
-  .analytics-scope #topProveedores {
-    height: 360px !important;
-  }
-  .analytics-scope #comprasPorPDV {
-    height: 340px !important;
-  }
-  .analytics-scope #comprasMensuales {
-    height: 230px !important;
-  }
-}
-
-/* TABLA Top Facturas: anular la regla global de 33.33% */
-.analytics-scope .table-card h2 + table {
-  table-layout: auto;
-}
-.analytics-scope .table-card h2 + table th,
-.analytics-scope .table-card h2 + table td {
-  width: auto !important;
-  white-space: nowrap;
-}
-
-/* ===== ANALYTICS – Distribución definitiva de filtros (scope aislado) ===== */
-
-.analytics-scope .filters {
-  display: grid !important;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px 16px;
-  align-items: end;
-}
-
-.analytics-scope .filters .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.analytics-scope .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  font-size: 14px;
-}
-
-/* Controles cómodos y sin cortes */
-.analytics-scope .filters .field select,
-.analytics-scope .filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: 0;
-  font-size: 14px;
-  min-width: 0;
-}
-
-/* Fechas: ancho real + espacio para el icono */
-.analytics-scope .filters .field input[type="date"] {
-  width: 180px;
-  min-width: 180px;
-  max-width: 220px;
-  padding-right: 28px;
-}
-
-/* Selects que no queden microscópicos en desktop */
-.analytics-scope .filters .field select {
-  min-width: 220px;
-}
-
-/* --- Desktop: compactamos Proveedor y damos más aire a las fechas --- */
-@media (min-width: 1100px) {
-  .analytics-scope .filters .field:nth-child(1) {
-    grid-column: span 3;
-  } /* PDV */
-  .analytics-scope .filters .field:nth-child(2) {
-    grid-column: span 3;
-  } /* Proveedor (antes 4) */
-  .analytics-scope .filters .field:nth-child(3) {
-    grid-column: span 2;
-  } /* Rango */
-  .analytics-scope .filters .field:nth-child(4) {
-    grid-column: span 2;
-  } /* Desde (más ancho) */
-  .analytics-scope .filters .field:nth-child(5) {
-    grid-column: span 1;
-  } /* Hasta */
-  .analytics-scope .filters .actions {
-    grid-column: span 1; /* última columna */
-    justify-content: flex-end;
-    display: flex;
-    align-self: end;
-  }
-}
-
-/* Tablet */
-@media (max-width: 1099px) {
-  .analytics-scope .filters {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .analytics-scope .filters .field {
-    grid-column: span 3;
-  }
-  .analytics-scope .filters .actions {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-/* Móvil */
-@media (max-width: 720px) {
-  .analytics-scope .filters {
-    grid-template-columns: 1fr;
-  }
-  .analytics-scope .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* CHARTS: tamaños controlados (sin scroll infinito) */
-.analytics-scope .table-card canvas {
-  width: 100% !important;
-  display: block;
-}
-.analytics-scope #topProveedores {
-  height: 320px !important;
-}
-.analytics-scope #comprasPorPDV {
-  height: 280px !important;
-}
-.analytics-scope #comprasMensuales {
-  height: 220px !important;
-}
-
-@media (max-width: 640px) {
-  .analytics-scope #topProveedores {
-    height: 360px !important;
-  }
-  .analytics-scope #comprasPorPDV {
-    height: 340px !important;
-  }
-  .analytics-scope #comprasMensuales {
-    height: 230px !important;
-  }
-}
-
-/* Tabla Top Facturas: evitar width:33% global */
-.analytics-scope .table-card h2 + table {
-  table-layout: auto;
-}
-.analytics-scope .table-card h2 + table th,
-.analytics-scope .table-card h2 + table td {
-  width: auto !important;
-  white-space: nowrap;
-}
-
-/* ===== ANALYTICS – Filtros en 2 filas fijas (scope local) ===== */
-
-.analytics-scope .filters {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-areas:
-    "pdv   prov  rango"
-    "d1    d2    actions";
-  gap: 12px 16px;
-  align-items: end;
-}
-
-/* Mapear cada bloque a su celda */
-.analytics-scope .filters .pdv {
-  grid-area: pdv;
-}
-.analytics-scope .filters .prov {
-  grid-area: prov;
-}
-.analytics-scope .filters .rango {
-  grid-area: rango;
-}
-.analytics-scope .filters .d1 {
-  grid-area: d1;
-}
-.analytics-scope .filters .d2 {
-  grid-area: d2;
-}
-.analytics-scope .filters .actions {
-  grid-area: actions;
-  display: flex;
-  justify-content: flex-end;
-  align-items: end;
-}
-
-/* Controles: consistentes y sin cortes de texto/ícono */
-.analytics-scope .filters .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.analytics-scope .filters .field label {
-  margin: 0;
-  font-weight: 700;
-  color: var(--brand-charcoal);
-  font-size: 14px;
-}
-.analytics-scope .filters .field select,
-.analytics-scope .filters .field input[type="date"] {
-  height: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: 0;
-  font-size: 14px;
-  min-width: 0;
-  width: 100%;
-}
-.analytics-scope .filters .field input[type="date"] {
-  padding-right: 28px;
-} /* deja ver los dígitos */
-
-/* Tablet: 2 columnas cómodas */
-@media (max-width: 1099px) and (min-width: 720px) {
-  .analytics-scope .filters {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-areas:
-      "pdv   prov"
-      "rango d1"
-      "d2    actions";
-  }
-}
-
-/* Móvil: 1 columna; botón full */
-@media (max-width: 719px) {
-  .analytics-scope .filters {
-    grid-template-columns: 1fr;
-    grid-template-areas: "pdv" "prov" "rango" "d1" "d2" "actions";
-  }
-  .analytics-scope .filters .actions .button {
-    width: 100%;
-  }
-}
-
-/* CHARTS: tamaños controlados (sin scroll infinito) */
-.analytics-scope .table-card canvas {
-  width: 100% !important;
-  display: block;
-}
-.analytics-scope #topProveedores {
-  height: 320px !important;
-}
-.analytics-scope #comprasPorPDV {
-  height: 280px !important;
-}
-.analytics-scope #comprasMensuales {
-  height: 220px !important;
-}
-
-@media (max-width: 640px) {
-  .analytics-scope #topProveedores {
-    height: 360px !important;
-  }
-  .analytics-scope #comprasPorPDV {
-    height: 340px !important;
-  }
-  .analytics-scope #comprasMensuales {
-    height: 230px !important;
-  }
-}
-
-/* Tabla Top Facturas: evitar width fijo global */
-.analytics-scope .table-card h2 + table {
-  table-layout: auto;
-}
-.analytics-scope .table-card h2 + table th,
-.analytics-scope .table-card h2 + table td {
-  width: auto !important;
-  white-space: nowrap;
+.dashboard-cards > .card.card-actions .k{
+  text-align: left !important;
 }

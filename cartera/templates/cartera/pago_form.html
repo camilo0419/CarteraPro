@@ -81,7 +81,7 @@
 
     <div class="form-actions">
     <a class="button secondary" href="{% url 'factura_detalle' factura.pk %}">Volver a la factura</a>
-    <button type="submit" class="button warning">Registrar Pago</button>
+    <button type="submit" class="button warning">Registrar y enviar correo</button>
   </div>
 
   </form>
@@ -92,12 +92,17 @@
   const form = document.getElementById('pago-form');
   if (!form) return;
 
-  // Hint de tipos aceptados para el comprobante (sin filtros custom)
+  function showProgress() {
+    const overlay = document.getElementById('progress-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+  }
+
   const fileInput = form.querySelector('input[type="file"][name="{{ form.comprobante.name }}"]');
   if (fileInput) fileInput.setAttribute('accept', '.pdf,image/*');
 
   form.addEventListener('submit', function (e) {
-    // Validación mínima en front (el backend valida igual)
     const fecha = form.querySelector('[name="{{ form.fecha_pago.name }}"]');
     if (fecha && !fecha.value) {
       e.preventDefault();
@@ -110,10 +115,13 @@
     const proveedor = "{{ factura.proveedor.nombre|escapejs }}";
     const valor = "{{ factura.valor_factura|floatformat:0|escapejs }}";
     const msg = `¿Confirmas registrar el pago de la factura ${numero} al proveedor ${proveedor} por $${valor}?`;
+
     if (!window.confirm(msg)) {
       e.preventDefault();
       return false;
     }
+
+    showProgress();
   });
 })();
 </script>

@@ -1,0 +1,94 @@
+{% extends "cartera/base.html" %}
+{% load formatting %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<div class="toolbar-grid">
+  <div class="filter-card">
+    <form method="get" class="filters-grid">
+      <div class="field"><label>Buscar</label><input type="search" name="q" value="{{ filters.q }}" placeholder="Proveedor, número, PDV o valor"></div>
+      <div class="field"><label>Proveedor</label><select name="prov"><option value="">Todos</option>{% for p in proveedores %}<option value="{{ p.id }}" {% if filters.prov == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}</select></div>
+      {% if request.user.is_staff %}<div class="field"><label>Punto de venta</label><select name="pdv"><option value="">Todos</option>{% for p in pdvs %}<option value="{{ p.id }}" {% if filters.pdv == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}</select></div>{% endif %}
+      {% if show_estado_filter %}<div class="field"><label>Estado</label><select name="estado"><option value="">Todos</option><option value="pendiente" {% if filters.estado == 'pendiente' %}selected{% endif %}>Pendiente</option><option value="pagada" {% if filters.estado == 'pagada' %}selected{% endif %}>Pagada</option></select></div>{% endif %}
+      {% if show_confirm_filter %}<div class="field"><label>Confirmación</label><select name="confirmacion"><option value="">Todas</option><option value="si" {% if filters.confirmacion == 'si' %}selected{% endif %}>Confirmadas</option><option value="no" {% if filters.confirmacion == 'no' %}selected{% endif %}>Sin confirmar</option></select></div>{% endif %}
+      <div class="field"><label>Mes</label><select name="mes"><option value="">Todos</option>{% for m in '123456789101112'|make_list %}{% endfor %}<option value="1" {% if filters.mes == '1' %}selected{% endif %}>Enero</option><option value="2" {% if filters.mes == '2' %}selected{% endif %}>Febrero</option><option value="3" {% if filters.mes == '3' %}selected{% endif %}>Marzo</option><option value="4" {% if filters.mes == '4' %}selected{% endif %}>Abril</option><option value="5" {% if filters.mes == '5' %}selected{% endif %}>Mayo</option><option value="6" {% if filters.mes == '6' %}selected{% endif %}>Junio</option><option value="7" {% if filters.mes == '7' %}selected{% endif %}>Julio</option><option value="8" {% if filters.mes == '8' %}selected{% endif %}>Agosto</option><option value="9" {% if filters.mes == '9' %}selected{% endif %}>Septiembre</option><option value="10" {% if filters.mes == '10' %}selected{% endif %}>Octubre</option><option value="11" {% if filters.mes == '11' %}selected{% endif %}>Noviembre</option><option value="12" {% if filters.mes == '12' %}selected{% endif %}>Diciembre</option></select></div>
+      <div class="field"><label>Año</label><select name="anio"><option value="">Todos</option>{% for anio in anios %}<option value="{{ anio }}" {% if filters.anio == anio|stringformat:'s' %}selected{% endif %}>{{ anio }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Desde</label><input type="date" name="desde" value="{{ filters.desde }}"></div>
+      <div class="field"><label>Hasta</label><input type="date" name="hasta" value="{{ filters.hasta }}"></div>
+      <div class="actions-row"><button class="button primary" type="submit">Aplicar</button><a class="button outline" href="{% url request.resolver_match.url_name %}">Limpiar</a>{% if tab == 'pendientes' %}<a class="button warning" href="{% url 'factura_create' %}">Nueva factura</a>{% endif %}</div>
+    </form>
+  </div>
+</div>
+{% if tab == 'pendientes' %}
+<form method="get" action="{% url 'pago_lote_create' %}" id="lote-form" class="lote-panel" style="display:none;">
+  <input type="hidden" name="ids" id="ids-lote">
+  <div><strong>Pago por lote:</strong> <span id="lote-prov">—</span></div>
+  <div><strong>Facturas:</strong> <span id="lote-cnt">0</span></div>
+  <div><strong>Total:</strong> $<span id="lote-total">0</span></div>
+  <button id="btn-lote" type="submit" class="button warning">Pagar seleccionadas</button>
+</form>
+{% endif %}
+<div class="table-card table-scroll">
+  <table id="tabla-facturas">
+    <thead>
+      <tr>
+        {% if tab == 'pendientes' %}<th style="width:56px"></th>{% endif %}
+        <th>Fecha</th><th>N.º</th><th>Proveedor</th><th>Punto de venta</th><th class="col-money">Valor</th><th>Estado</th><th>Confirmación</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in facturas %}
+      <tr>
+        {% if tab == 'pendientes' %}
+        <td>{% if f.estado == 'pendiente' and not f.pagos.all|length %}<input type="checkbox" class="cb-fact" value="{{ f.id }}" data-proveedor="{{ f.proveedor.id }}" data-proveedor-nombre="{{ f.proveedor.nombre }}" data-saldo="{{ f.saldo|floatformat:0 }}">{% endif %}</td>
+        {% endif %}
+        <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
+        <td><a href="{% url 'factura_detalle' f.pk %}">{{ f.numero_factura }}</a></td>
+        <td>{{ f.proveedor.nombre }}</td>
+        <td>{{ f.punto_venta.nombre }}</td>
+        <td class="col-money">${{ f.valor_factura|miles }}</td>
+        <td><span class="badge {% if f.estado == 'pagada' %}ok{% else %}warn{% endif %}">{{ f.get_estado_display }}</span></td>
+        <td>{% if f.confirmado_pago %}<span class="badge ok">Confirmada</span>{% else %}<span class="badge warn">Sin confirmar</span>{% endif %}</td>
+        <td><div class="actions-inline"><a class="button outline small" href="{% url 'factura_detalle' f.pk %}">Ver</a>{% if f.estado == 'pendiente' and not f.pagos.all|length and not f.confirmado_pago %}<a class="button outline small" href="{% url 'factura_update' f.pk %}">Editar</a><a class="button outline small" href="{% url 'pago_create' f.pk %}">Pagar</a>{% endif %}</div></td>
+      </tr>
+      {% empty %}<tr><td colspan="9">No hay registros.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="pagination">{% if page_obj.has_previous %}<a href="?page=1&{% for k,v in filters.items %}{% if v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}">Primero</a><a href="?page={{ page_obj.previous_page_number }}&{% for k,v in filters.items %}{% if v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}">Anterior</a>{% else %}<span>Primero</span><span>Anterior</span>{% endif %}<span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&{% for k,v in filters.items %}{% if v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}">Siguiente</a><a href="?page={{ page_obj.paginator.num_pages }}&{% for k,v in filters.items %}{% if v %}{{ k }}={{ v|urlencode }}&{% endif %}{% endfor %}">Último</a>{% else %}<span>Siguiente</span><span>Último</span>{% endif %}</div>
+{% if tab == 'pendientes' and resumen_por_proveedor %}
+<h2>Saldo por proveedor</h2>
+<div class="table-card table-scroll">
+  <table>
+    <thead><tr><th>Proveedor</th><th class="col-count">Facturas</th><th class="col-money">Saldo</th></tr></thead>
+    <tbody>{% for r in resumen_por_proveedor %}<tr><td>{{ r.proveedor__nombre }}</td><td class="col-count">{{ r.facturas }}</td><td class="col-money">${{ r.total|miles }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th>Total</th><th></th><th class="col-money">${{ total_general_pendiente|miles }}</th></tr></tfoot>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+{% if tab == 'pendientes' %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const panel = document.getElementById('lote-form');
+  if (!panel) return;
+  const hidden = document.getElementById('ids-lote');
+  const spanProv = document.getElementById('lote-prov');
+  const spanCnt = document.getElementById('lote-cnt');
+  const spanTot = document.getElementById('lote-total');
+  function clean(v){ return Number(String(v || '').replace(/[^\d.-]/g,'')) || 0; }
+  function refresh(last){
+    const checked = Array.from(document.querySelectorAll('.cb-fact:checked'));
+    if (checked.length < 2){ panel.style.display='none'; hidden.value=''; spanProv.textContent='—'; spanCnt.textContent='0'; spanTot.textContent='0'; return; }
+    const prov = checked[0].dataset.proveedor;
+    const provName = checked[0].dataset.proveedorNombre;
+    let total = 0;
+    for (const cb of checked){ if (cb.dataset.proveedor !== prov){ if (last) last.checked=false; alert('Solo puedes seleccionar facturas del mismo proveedor.'); return refresh(); } total += clean(cb.dataset.saldo); }
+    panel.style.display='flex'; hidden.value = checked.map(x => x.value).join(','); spanProv.textContent = provName; spanCnt.textContent = checked.length; spanTot.textContent = total.toLocaleString('es-CO');
+  }
+  document.addEventListener('change', (e)=>{ if (e.target.classList.contains('cb-fact')) refresh(e.target); });
+});
+</script>
+{% endif %}
+{% endblock %}
