@@ -483,6 +483,7 @@ class PortalProveedorTests(CarteraBaseTestCase):
         response = self.client.get(reverse("portal_proveedor_dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Panel del proveedor")
+        self.assertContains(response, "provider-table--compact")
 
     def test_user_without_active_provider_cannot_enter_portal(self):
         self.client.force_login(self.other_user)
@@ -505,6 +506,11 @@ class PortalProveedorTests(CarteraBaseTestCase):
             with self.subTest(url=url):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 403)
+
+    def test_provider_user_without_staff_cannot_access_internal_factura_detail(self):
+        self.client.force_login(self.portal_user)
+        response = self.client.get(reverse("factura_detalle", args=[self.factura.pk]))
+        self.assertEqual(response.status_code, 403)
 
     def test_provider_user_without_staff_cannot_list_internal_factura_api(self):
         self.api.force_authenticate(self.portal_user)
@@ -887,6 +893,104 @@ class PortalProveedorTests(CarteraBaseTestCase):
             ).exists()
         )
 
+    def test_provider_cannot_report_confirmed_payment_novedad(self):
+        self.factura.confirmado_pago = True
+        self.factura.save(update_fields=["confirmado_pago"])
+        self.client.force_login(self.portal_user)
+        response = self.client.post(
+            reverse("portal_proveedor_pago_novedad", args=[self.pago.pk]),
+            {"motivo": "valor_no_coincide", "detalle": "No debe registrarse."},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("portal_proveedor_factura_detail", args=[self.factura.pk]))
+        self.assertFalse(
+            EventoAuditoria.objects.filter(
+                tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR,
+                pago=self.pago,
+            ).exists()
+        )
+
+    def test_confirmed_payment_hides_novedad_action(self):
+        self.factura.confirmado_pago = True
+        self.factura.save(update_fields=["confirmado_pago"])
+        self.client.force_login(self.portal_user)
+
+        response = self.client.get(reverse("portal_proveedor_pagos"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pago confirmado")
+        self.assertNotContains(response, reverse("portal_proveedor_pago_novedad", args=[self.pago.pk]))
+
+        response = self.client.get(reverse("portal_proveedor_factura_detail", args=[self.factura.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pago confirmado")
+        self.assertNotContains(response, reverse("portal_proveedor_pago_novedad", args=[self.pago.pk]))
+
+    def test_provider_payment_novedad_is_visible_in_internal_factura_detail(self):
+        EventoAuditoria.objects.create(
+            tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR,
+            factura=self.factura,
+            pago=self.pago,
+            usuario=self.portal_user,
+            metadata={
+                "origen": "portal_proveedor",
+                "motivo": "valor_no_coincide",
+                "detalle": "El valor no coincide con mi extracto.",
+                "target_type": "pago",
+            },
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("factura_detalle", args=[self.factura.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Novedades reportadas por proveedor")
+        self.assertContains(response, "Valor no coincide")
+        self.assertContains(response, "El valor no coincide con mi extracto.")
+        self.assertContains(response, self.portal_user.username)
+        self.assertContains(response, f"Pago #{self.pago.pk}")
+
+    def test_provider_lote_novedad_is_visible_in_internal_factura_detail(self):
+        lote = PagoLote.objects.create(
+            proveedor=self.proveedor,
+            fecha_pago=date(2026, 2, 8),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-novedad.pdf",
+        )
+        self.pago.lote = lote
+        self.pago.save(update_fields=["lote"])
+        EventoAuditoria.objects.create(
+            tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR,
+            lote=lote,
+            usuario=self.portal_user,
+            metadata={
+                "origen": "portal_proveedor",
+                "motivo": "comprobante_no_abre",
+                "detalle": "No puedo abrir el comprobante.",
+                "target_type": "lote",
+            },
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("factura_detalle", args=[self.factura.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Comprobante no abre")
+        self.assertContains(response, "No puedo abrir el comprobante.")
+        self.assertContains(response, f"Lote #{lote.pk}")
+
+    def test_internal_factura_detail_does_not_show_other_pdv_novedad(self):
+        EventoAuditoria.objects.create(
+            tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR,
+            factura=self.other_factura,
+            usuario=self.portal_user,
+            metadata={
+                "origen": "portal_proveedor",
+                "motivo": "otro",
+                "detalle": "Novedad de otro punto de venta.",
+            },
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("factura_detalle", args=[self.factura.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No hay novedades reportadas por el proveedor.")
+        self.assertNotContains(response, "Novedad de otro punto de venta.")
+
     def test_provider_cannot_report_payment_novedad_for_other_provider(self):
         self.client.force_login(self.portal_user)
         response = self.client.post(
@@ -913,6 +1017,48 @@ class PortalProveedorTests(CarteraBaseTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(EventoAuditoria.objects.filter(tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR, lote=lote).exists())
 
+    def test_provider_cannot_report_confirmed_lote_novedad(self):
+        lote = PagoLote.objects.create(
+            proveedor=self.proveedor,
+            fecha_pago=date(2026, 2, 8),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-confirmado.pdf",
+        )
+        self.pago.lote = lote
+        self.pago.save(update_fields=["lote"])
+        self.factura.confirmado_pago = True
+        self.factura.save(update_fields=["confirmado_pago"])
+        self.client.force_login(self.portal_user)
+        response = self.client.post(
+            reverse("portal_proveedor_lote_novedad", args=[lote.pk]),
+            {"motivo": "comprobante_no_abre", "detalle": "No debe registrarse."},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("portal_proveedor_lote_detail", args=[lote.pk]))
+        self.assertFalse(
+            EventoAuditoria.objects.filter(
+                tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR,
+                lote=lote,
+            ).exists()
+        )
+
+    def test_confirmed_lote_hides_novedad_action(self):
+        lote = PagoLote.objects.create(
+            proveedor=self.proveedor,
+            fecha_pago=date(2026, 2, 8),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-confirmado.pdf",
+        )
+        self.pago.lote = lote
+        self.pago.save(update_fields=["lote"])
+        self.factura.confirmado_pago = True
+        self.factura.save(update_fields=["confirmado_pago"])
+        self.client.force_login(self.portal_user)
+        response = self.client.get(reverse("portal_proveedor_lote_detail", args=[lote.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lote confirmado")
+        self.assertNotContains(response, reverse("portal_proveedor_lote_novedad", args=[lote.pk]))
+
     def test_provider_cannot_report_lote_novedad_for_other_provider(self):
         lote_b = PagoLote.objects.create(
             proveedor=self.proveedor_b,
@@ -929,6 +1075,66 @@ class PortalProveedorTests(CarteraBaseTestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertFalse(EventoAuditoria.objects.filter(tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR, lote=lote_b).exists())
+
+    def test_portal_pagos_distinguishes_individual_and_lote_payments(self):
+        lote = PagoLote.objects.create(
+            proveedor=self.proveedor,
+            fecha_pago=date(2026, 2, 10),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-indicador.pdf",
+        )
+        self.pago.lote = lote
+        self.pago.save(update_fields=["lote"])
+        factura_individual = Factura.objects.create(
+            proveedor=self.proveedor,
+            punto_venta=self.pv,
+            numero_factura="FI-001",
+            fecha_factura=date(2026, 1, 7),
+            valor_factura=Decimal("110000.00"),
+        )
+        pago_individual = Pago.objects.create(
+            factura=factura_individual,
+            fecha_pago=date(2026, 2, 11),
+            valor_pagado=factura_individual.valor_factura,
+            pagado_por="OFICINA",
+            comprobante="comprobantes/pago-individual.pdf",
+        )
+        factura_individual.total_pagado = factura_individual.valor_factura
+        factura_individual.estado = "pagada"
+        factura_individual.save(update_fields=["total_pagado", "estado"])
+        self.client.force_login(self.portal_user)
+        response = self.client.get(reverse("portal_proveedor_pagos") + "?confirmacion=sin_confirmar")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pago en lote")
+        self.assertContains(response, f"Lote #{lote.pk}")
+        self.assertContains(response, "Confirmar lote")
+        self.assertContains(response, "Pago individual")
+        self.assertContains(response, f"/portal-proveedor/pagos/{pago_individual.pk}/confirmar/")
+        self.assertNotContains(response, f"/portal-proveedor/pagos/{self.pago.pk}/confirmar/")
+
+    def test_portal_pagos_pending_lotes_are_scoped_to_provider(self):
+        lote = PagoLote.objects.create(
+            proveedor=self.proveedor,
+            fecha_pago=date(2026, 2, 12),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-a-pendiente.pdf",
+        )
+        self.pago.lote = lote
+        self.pago.save(update_fields=["lote"])
+        lote_b = PagoLote.objects.create(
+            proveedor=self.proveedor_b,
+            fecha_pago=date(2026, 2, 12),
+            pagado_por="OFICINA",
+            comprobante="comprobantes/lote-b-pendiente.pdf",
+        )
+        self.pago_b.lote = lote_b
+        self.pago_b.save(update_fields=["lote"])
+        self.client.force_login(self.portal_user)
+        response = self.client.get(reverse("portal_proveedor_pagos") + "?confirmacion=sin_confirmar")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lotes pendientes por confirmar")
+        self.assertContains(response, f"Lote #{lote.pk}")
+        self.assertNotContains(response, f"Lote #{lote_b.pk}")
 
     def test_main_portal_pages_return_200(self):
         self.client.force_login(self.portal_user)

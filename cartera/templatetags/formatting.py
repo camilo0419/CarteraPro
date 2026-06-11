@@ -4,6 +4,15 @@ from cartera.scoping import get_user_pdv
 
 register = template.Library()
 
+NOVEDAD_MOTIVO_LABELS = {
+    "comprobante_no_abre": "Comprobante no abre",
+    "valor_no_coincide": "Valor no coincide",
+    "no_identifico_pago": "No identifico el pago",
+    "factura_no_corresponde": "Factura no corresponde",
+    "pago_parcial": "Pago recibido parcialmente",
+    "otro": "Otro",
+}
+
 @register.filter
 def miles(value):
     """
@@ -18,6 +27,14 @@ def miles(value):
     s = f"{n:,.0f}"
     # 2) cambia coma por punto: "12.346"
     return s.replace(",", ".")
+
+
+@register.filter
+def motivo_novedad(value):
+    raw = (value or "").strip()
+    if not raw:
+        return "Novedad"
+    return NOVEDAD_MOTIVO_LABELS.get(raw, raw.replace("_", " ").capitalize())
 
 
 @register.simple_tag(takes_context=True)

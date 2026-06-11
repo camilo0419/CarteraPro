@@ -1,4 +1,5 @@
 {% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
 
 {% block title %}Novedades proveedor{% endblock %}
 
@@ -22,7 +23,7 @@
       <div class="provider-list__item">
         <div class="provider-list__content">
           <span class="provider-badge provider-badge--danger">Novedad</span>
-          <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+          <strong>{{ evento.metadata.motivo|motivo_novedad }}</strong>
           <span>{{ evento.metadata.detalle }}</span>
           <small>{{ evento.creado_en|date:"d/m/Y H:i" }}</small>
         </div>

@@ -390,10 +390,19 @@ body {
   background: #fff;
 }
 
+.provider-table-wrap--fit {
+  overflow-x: visible;
+}
+
 .provider-table {
   min-width: 760px;
   border-collapse: separate;
   border-spacing: 0;
+}
+
+.provider-table--compact {
+  min-width: 0;
+  width: 100%;
 }
 
 .provider-table thead th {
@@ -433,6 +442,20 @@ body {
 .provider-table__empty {
   color: var(--provider-muted);
   text-align: center;
+}
+
+.provider-inline-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.provider-action-note {
+  color: var(--provider-muted);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
 .provider-list {
@@ -640,6 +663,14 @@ body {
   .provider-list__item {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .provider-table-wrap--fit {
+    overflow-x: auto;
+  }
+
+  .provider-table--compact {
+    min-width: 520px;
   }
 }
 

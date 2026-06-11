@@ -32,6 +32,43 @@
   </form>
 </section>
 
+{% if lotes_pendientes %}
+<section class="provider-panel">
+  <div class="provider-panel__head">
+    <div>
+      <h2>Lotes pendientes por confirmar</h2>
+      <p class="provider-panel__summary">Estos pagos pertenecen a un lote y deben revisarse desde el detalle del lote.</p>
+    </div>
+  </div>
+  <div class="provider-table-wrap">
+    <table class="provider-table">
+      <thead>
+        <tr>
+          <th>Lote</th>
+          <th>Fecha</th>
+          <th class="provider-table__money">Valor total</th>
+          <th>Pagos</th>
+          <th>Estado</th>
+          <th class="provider-table__actions">Accion</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for lote in lotes_pendientes %}
+        <tr>
+          <td><a href="{% url 'portal_proveedor_lote_detail' lote.pk %}">Lote #{{ lote.pk }}</a></td>
+          <td>{{ lote.fecha_pago|date:"d/m/Y" }}</td>
+          <td class="provider-table__money">${{ lote.portal_total|miles }}</td>
+          <td>{{ lote.portal_pagos_count }}</td>
+          <td><span class="provider-badge provider-badge--warn">Por confirmar</span></td>
+          <td><a class="button warning small" href="{% url 'portal_proveedor_lote_detail' lote.pk %}">Confirmar lote</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <section class="provider-panel">
   <div class="provider-table-wrap">
   <table class="provider-table">
@@ -40,6 +77,7 @@
         <th>Fecha</th>
         <th>Factura</th>
         <th>Punto de venta</th>
+        <th>Tipo</th>
         <th class="provider-table__money">Valor</th>
         <th>Comprobante</th>
         <th>Estado</th>
@@ -52,6 +90,14 @@
         <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
         <td><a href="{% url 'portal_proveedor_factura_detail' pago.factura_id %}">{{ pago.factura.numero_factura }}</a></td>
         <td>{{ pago.factura.punto_venta.nombre }}</td>
+        <td>
+          {% if pago.lote_id %}
+            <span class="provider-badge provider-badge--paid">Pago en lote</span>
+            <a class="provider-inline-link" href="{% url 'portal_proveedor_lote_detail' pago.lote_id %}">Lote #{{ pago.lote_id }}</a>
+          {% else %}
+            <span class="provider-badge provider-badge--wait">Pago individual</span>
+          {% endif %}
+        </td>
         <td class="provider-table__money">${{ pago.valor_pagado|miles }}</td>
         <td>{% if pago.comprobante %}<a class="button outline small" href="{% url 'portal_proveedor_comprobante' pago.pk %}">Ver comprobante</a>{% else %}<span class="muted">No disponible</span>{% endif %}</td>
         <td>
@@ -62,17 +108,23 @@
           {% endif %}
         </td>
         <td class="actions-inline">
-          {% if not pago.factura.confirmado_pago %}
+          {% if pago.lote_id %}
+            <a class="button warning small" href="{% url 'portal_proveedor_lote_detail' pago.lote_id %}">{% if pago.factura.confirmado_pago %}Ver lote{% else %}Confirmar lote{% endif %}</a>
+          {% elif not pago.factura.confirmado_pago %}
             <form method="post" action="{% url 'portal_proveedor_pago_confirmar' pago.pk %}">
               {% csrf_token %}
               <button class="button warning small" type="submit">Confirmar</button>
             </form>
           {% endif %}
-          <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Novedad</a>
+          {% if pago.factura.confirmado_pago %}
+            <span class="provider-action-note">Pago confirmado</span>
+          {% else %}
+            <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Novedad</a>
+          {% endif %}
         </td>
       </tr>
     {% empty %}
-      <tr><td class="provider-table__empty" colspan="7">No hay pagos con estos filtros.</td></tr>
+      <tr><td class="provider-table__empty" colspan="8">No hay pagos con estos filtros.</td></tr>
     {% endfor %}
     </tbody>
   </table>

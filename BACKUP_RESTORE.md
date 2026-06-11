@@ -1,92 +1,120 @@
-# Backup y restauración
+# Backup y restauracion
 
-CarteraPro maneja datos sensibles de cartera, pagos, proveedores y comprobantes. El backup debe cubrir base de datos y archivos media.
+CarteraPro maneja datos sensibles de cartera, pagos, proveedores y comprobantes. El backup debe cubrir base de datos y archivos de comprobantes.
 
-## Alcance del backup actual
+## Alcance
 
-Existe un proceso externo en Windows que ejecuta `pg_dump` diario contra PostgreSQL. Ese backup cubre la base de datos, incluyendo facturas, pagos, usuarios, logs y referencias a comprobantes.
+El backup de base de datos cubre facturas, pagos, proveedores, usuarios, auditoria, notificaciones y referencias a comprobantes. No cubre automaticamente archivos en S3 ni media local.
 
-Importante: `pg_dump` no respalda archivos en S3 ni media local. Los comprobantes deben respaldarse aparte.
-
-## Backup recomendado de base de datos
+## Backup de base de datos
 
 Ejemplo general:
 
 ```bash
-pg_dump "$DATABASE_URL" --format=custom --no-owner --file cartera_YYYYMMDD.dump
+pg_dump "$DATABASE_URL" --format=custom --no-owner --file cartera_YYYYMMDD_HHMM.dump
 ```
 
-Buenas prácticas:
+Buenas practicas:
 
-- Guardar dumps fuera del servidor de producción.
-- Mantener retención diaria/semanal/mensual.
-- Cifrar los respaldos si salen de una red controlada.
-- Registrar fecha, tamaño, hash y resultado del comando.
+- Guardar dumps fuera del servidor de produccion.
+- Mantener retencion diaria, semanal y mensual.
+- Cifrar backups si salen de una red controlada.
+- Registrar fecha, tamano, hash y resultado.
+- Probar restauracion periodicamente en un ambiente aislado.
 
-## Backup recomendado de S3/media
+## Backup de S3/media
 
-Los comprobantes viven en S3 cuando `USE_S3_MEDIA=True`. Respaldar el bucket o al menos el prefijo `media/`.
-
-Ejemplo con AWS CLI:
+Cuando `USE_S3_MEDIA=True`, los comprobantes viven en S3. Respaldar el bucket o el prefijo `media/`.
 
 ```bash
 aws s3 sync s3://NOMBRE_BUCKET/media ./backup-media/media --only-show-errors
 ```
 
-Buenas prácticas:
+Buenas practicas:
 
 - Activar versionado del bucket si es viable.
 - Proteger el bucket contra borrado accidental.
-- Probar descarga de una muestra de comprobantes.
-- Documentar región, bucket y prefijo usado.
+- Verificar una muestra de comprobantes descargados.
+- Documentar region, bucket y prefijo usado.
 
-## Restauración de base de datos
+## Restauracion en ambiente aislado
 
-En un ambiente aislado:
+Base de datos:
 
 ```bash
 createdb cartera_restore
-pg_restore --dbname cartera_restore --clean --if-exists cartera_YYYYMMDD.dump
+pg_restore --dbname cartera_restore --clean --if-exists cartera_YYYYMMDD_HHMM.dump
 APP_ENV=local python manage.py migrate --noinput
 APP_ENV=local python manage.py check
 ```
 
-No restaurar sobre producción sin ventana de mantenimiento y backup reciente confirmado.
-
-## Restauración de media/S3
-
-Ejemplo:
+Media/S3:
 
 ```bash
 aws s3 sync ./backup-media/media s3://NOMBRE_BUCKET/media --only-show-errors
 ```
 
-Después de restaurar:
+Despues de restaurar:
 
-- Verificar que las rutas guardadas en `Pago.comprobante` y `PagoLote.comprobante` existen en S3.
+- Verificar conteos de facturas, pagos, proveedores y usuarios.
+- Confirmar que `Pago.comprobante` y `PagoLote.comprobante` apuntan a objetos existentes.
 - Abrir comprobantes desde la app con un usuario autorizado.
-- Enviar correo de prueba con adjunto.
+- Ejecutar una prueba de correo con destinatario controlado.
+- Probar confirmacion publica en staging: GET no muta, POST confirma.
+- Probar portal proveedor: scoping, confirmaciones POST y novedades.
 
-## Prueba mensual de restauración
+## Restauracion en produccion
 
-Checklist mínimo:
+No restaurar sobre produccion sin:
+
+- Backup reciente confirmado.
+- Ventana de mantenimiento.
+- Aprobacion operativa.
+- Plan de comunicacion.
+- Verificacion de compatibilidad entre codigo desplegado y esquema de base de datos.
+
+Comando base:
+
+```bash
+pg_restore --dbname "$DATABASE_URL" --clean --if-exists cartera_YYYYMMDD_HHMM.dump
+```
+
+Restaurar media si aplica:
+
+```bash
+aws s3 sync ./backup-media/media s3://NOMBRE_BUCKET/media --only-show-errors
+```
+
+## Prueba mensual de restauracion
+
+Checklist minimo:
 
 - Restaurar dump en base temporal.
-- Configurar `.env` temporal sin secretos de producción innecesarios.
+- Configurar `.env` temporal sin secretos de produccion innecesarios.
 - Ejecutar `APP_ENV=local python manage.py check`.
-- Contar facturas, pagos y proveedores.
+- Ejecutar `APP_ENV=test python manage.py test` contra SQLite local.
+- Contar facturas, pagos, proveedores y eventos de auditoria.
 - Verificar al menos tres comprobantes en S3.
-- Probar confirmación pública en staging.
-- Registrar resultado y responsable.
+- Probar confirmacion publica en staging.
+- Registrar resultado, fecha y responsable.
 
-## Comandos útiles
+## Comandos utiles
 
 ```bash
 APP_ENV=local python manage.py check
 APP_ENV=local python manage.py makemigrations --check --dry-run
 APP_ENV=local python manage.py migrate
 APP_ENV=local python manage.py collectstatic --noinput
-APP_ENV=local python manage.py createsuperuser
 APP_ENV=test python manage.py test
 python -m pip check
 ```
+
+## Archivos locales que no deben versionarse
+
+- `.env`
+- `.env.postgres`
+- `db.sqlite3`
+- `media/`
+- `__pycache__/`
+- `.venv/`
+- dumps, backups y archivos `.zip`

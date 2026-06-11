@@ -21,7 +21,11 @@
         <button class="button warning" type="submit">Confirmar lote</button>
       </form>
     {% endif %}
-    <a class="button danger" href="{% url 'portal_proveedor_lote_novedad' lote.pk %}">Reportar novedad</a>
+    {% if confirmado %}
+      <span class="provider-action-note">Lote confirmado</span>
+    {% else %}
+      <a class="button danger" href="{% url 'portal_proveedor_lote_novedad' lote.pk %}">Reportar novedad</a>
+    {% endif %}
   </div>
 </section>
 
@@ -99,7 +103,7 @@
     {% for evento in novedades %}
       <div class="provider-list__item">
         <div class="provider-list__content">
-          <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+          <strong>{{ evento.metadata.motivo|motivo_novedad }}</strong>
           <span>{{ evento.metadata.detalle }}</span>
         </div>
       </div>

@@ -86,7 +86,11 @@
                 <button class="button warning small" type="submit">Confirmar</button>
               </form>
             {% endif %}
-            <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Reportar novedad</a>
+            {% if pago.factura.confirmado_pago %}
+              <span class="provider-action-note">Pago confirmado</span>
+            {% else %}
+              <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Reportar novedad</a>
+            {% endif %}
             {% if pago.lote_id %}<a class="button outline small" href="{% url 'portal_proveedor_lote_detail' pago.lote_id %}">Ver lote</a>{% endif %}
           </td>
         </tr>
@@ -105,7 +109,7 @@
       {% for evento in novedades %}
         <div class="provider-list__item">
           <div class="provider-list__content">
-            <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+            <strong>{{ evento.metadata.motivo|motivo_novedad }}</strong>
             <span>{{ evento.metadata.detalle }}</span>
           </div>
         </div>

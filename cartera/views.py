@@ -23,7 +23,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .forms import FacturaForm, PagoComprobanteForm, PagoForm, PagoLoteForm
-from .models import CorreoEnvioLog, Factura, PAGO_LOTE_MONOPROVEEDOR_ERROR, Pago, PagoLote, Proveedor, PuntoVenta
+from .models import CorreoEnvioLog, EventoAuditoria, Factura, PAGO_LOTE_MONOPROVEEDOR_ERROR, Pago, PagoLote, Proveedor, PuntoVenta
 from .scoping import ensure_user_scope, get_user_pdv, is_global_user, scoped_facturas, scoped_pagos
 from .serializers import FacturaSerializer, PagoSerializer, ProveedorSerializer
 from .services.invoices import guardar_factura_desde_form
@@ -36,6 +36,7 @@ from .services.payments import (
     enviar_correo_pago_si_aplica,
 )
 from .utils import validar_token, validar_token_lote
+from .templatetags.formatting import motivo_novedad
 
 # fix accidental import name typo if referenced elsewhere
 ALERTA_FACTURA = Decimal("1000000")
@@ -77,6 +78,49 @@ def _parse_decimal_search(raw):
         return Decimal(qnum)
     except Exception:
         return None
+
+
+def _format_origen_novedad(value):
+    raw = (value or "").strip()
+    if raw == "portal_proveedor":
+        return "Portal proveedor"
+    return raw.replace("_", " ").capitalize() if raw else "Portal proveedor"
+
+
+def _build_novedades_factura(factura):
+    lote_ids = factura.pagos.exclude(lote__isnull=True).values_list("lote_id", flat=True)
+    eventos = (
+        EventoAuditoria.objects.filter(tipo=EventoAuditoria.TIPO_NOVEDAD_PROVEEDOR)
+        .filter(Q(factura=factura) | Q(pago__factura=factura) | Q(lote_id__in=lote_ids))
+        .select_related("factura__proveedor", "pago__factura__proveedor", "lote__proveedor", "usuario")
+        .distinct()
+        .order_by("-creado_en", "-id")
+    )
+    novedades = []
+    for evento in eventos:
+        metadata = evento.metadata or {}
+        if evento.pago_id:
+            proveedor = evento.pago.factura.proveedor
+            relacion = f"Pago #{evento.pago_id}"
+        elif evento.lote_id:
+            proveedor = evento.lote.proveedor
+            relacion = f"Lote #{evento.lote_id}"
+        elif evento.factura_id:
+            proveedor = evento.factura.proveedor
+            relacion = f"Factura {evento.factura.numero_factura}"
+        else:
+            proveedor = factura.proveedor
+            relacion = f"Factura {factura.numero_factura}"
+        novedades.append({
+            "fecha": evento.creado_en,
+            "proveedor": proveedor.nombre if proveedor else "",
+            "usuario": evento.usuario.get_username() if evento.usuario_id else "",
+            "motivo": motivo_novedad(metadata.get("motivo")),
+            "detalle": metadata.get("detalle") or "",
+            "origen": _format_origen_novedad(metadata.get("origen")),
+            "relacion": relacion,
+        })
+    return novedades
 
 
 def _base_factura_filters(request, qs, include_estado=None):
@@ -311,6 +355,7 @@ class FacturaDetalleView(LoginRequiredMixin, DetailView):
             "envios_exitosos": envios_exitosos,
             "ultimo_envio": ultimo_envio,
             "ultimo_enviado_a": getattr(ultimo_envio, "enviado_a", "") if ultimo_envio else "",
+            "novedades_proveedor": _build_novedades_factura(factura),
             "puede_eliminar": factura.estado == "pendiente" and not factura.pagos.exists() and not factura.confirmado_pago,
         })
         return ctx

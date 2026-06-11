@@ -181,6 +181,24 @@ class PortalPagoListView(PortalProveedorMixin, ListView):
             qs = qs.filter(factura__confirmado_pago=False)
         return qs.order_by("-fecha_pago", "-id")
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        estado = (self.request.GET.get("confirmacion") or "").strip()
+        lotes_pendientes = []
+        if estado == "sin_confirmar":
+            lotes_pendientes = list(
+                lotes_visibles(self.request.user)
+                .filter(pagos__factura__confirmado_pago=False)
+                .distinct()
+                .order_by("-fecha_pago", "-id")
+            )
+            for lote in lotes_pendientes:
+                pagos = list(lote.pagos.all())
+                lote.portal_total = sum((p.valor_pagado or Decimal("0")) for p in pagos)
+                lote.portal_pagos_count = len(pagos)
+        ctx["lotes_pendientes"] = lotes_pendientes
+        return ctx
+
 
 class PortalPagoConfirmView(PortalProveedorMixin, View):
     def post(self, request, pk):
@@ -284,10 +302,16 @@ class PortalNovedadBaseView(PortalProveedorMixin, View):
 
     def get(self, request, pk):
         target = self.get_target()
+        blocked = self.block_confirmed_target(request, target)
+        if blocked is not None:
+            return blocked
         return render(request, self.template_name, self.get_context(target, NovedadProveedorForm()))
 
     def post(self, request, pk):
         target = self.get_target()
+        blocked = self.block_confirmed_target(request, target)
+        if blocked is not None:
+            return blocked
         form = NovedadProveedorForm(request.POST)
         if not form.is_valid():
             return render(request, self.template_name, self.get_context(target, form))
@@ -326,6 +350,24 @@ class PortalNovedadBaseView(PortalProveedorMixin, View):
 
     def get_proveedor(self, target):
         return target.proveedor if isinstance(target, PagoLote) else target.factura.proveedor
+
+    def is_target_confirmed(self, target):
+        if isinstance(target, Pago):
+            return bool(target.factura.confirmado_pago)
+        pagos = target.pagos.select_related("factura")
+        return pagos.exists() and not pagos.filter(factura__confirmado_pago=False).exists()
+
+    def get_block_redirect(self, target):
+        if isinstance(target, PagoLote):
+            return redirect("portal_proveedor_lote_detail", pk=target.pk)
+        return redirect("portal_proveedor_factura_detail", pk=target.factura_id)
+
+    def block_confirmed_target(self, request, target):
+        if not self.is_target_confirmed(target):
+            return None
+        label = "lote" if isinstance(target, PagoLote) else "pago"
+        messages.error(request, f"No se puede reportar una novedad sobre un {label} ya confirmado.")
+        return self.get_block_redirect(target)
 
     def get_context(self, target, form):
         ctx = self.get_context_data()
