@@ -1,0 +1,36 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+
+{% block title %}Novedades proveedor{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Novedades</h1>
+    <p>Historial de novedades reportadas desde el portal.</p>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head">
+    <div>
+      <h2>Novedades reportadas</h2>
+      <p class="provider-panel__summary">Historial de reportes enviados desde el portal.</p>
+    </div>
+  </div>
+  <div class="provider-list">
+    {% for evento in novedades %}
+      <div class="provider-list__item">
+        <div class="provider-list__content">
+          <span class="provider-badge provider-badge--danger">Novedad</span>
+          <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+          <span>{{ evento.metadata.detalle }}</span>
+          <small>{{ evento.creado_en|date:"d/m/Y H:i" }}</small>
+        </div>
+      </div>
+    {% empty %}
+      <p class="provider-empty">No hay novedades reportadas.</p>
+    {% endfor %}
+  </div>
+</section>
+{% include "cartera/portal_proveedor/pagination.html" %}
+{% endblock %}

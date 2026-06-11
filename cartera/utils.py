@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.html import strip_tags
 
-from .models import CorreoEnvioLog, PagoLote
+from .models import CorreoEnvioLog, EventoAuditoria, PagoLote
 
 signer = TimestampSigner()
 
@@ -59,7 +59,7 @@ def _attach_fieldfile(email, ff):
         email.attach(filename, content, mime)
 
 
-def _log_envio(*, tipo, factura=None, pago=None, lote=None, enviado_a="", asunto="", exito=False, detalle=""):
+def _log_envio(*, tipo, factura=None, pago=None, lote=None, enviado_a="", asunto="", exito=False, detalle="", request=None):
     CorreoEnvioLog.objects.create(
         tipo=tipo,
         factura=factura,
@@ -70,6 +70,25 @@ def _log_envio(*, tipo, factura=None, pago=None, lote=None, enviado_a="", asunto
         exito=bool(exito),
         detalle=detalle or "",
     )
+    from .services.audit import registrar_evento
+
+    registrar_evento(
+        EventoAuditoria.TIPO_CORREO_ENVIADO,
+        factura=factura,
+        pago=pago,
+        lote=lote,
+        request=request,
+        metadata={
+            "tipo": tipo,
+            "enviado_a": enviado_a,
+            "asunto": asunto,
+            "exito": bool(exito),
+            "detalle": detalle,
+        },
+    )
+    from .services.provider_notifications import notificar_correo_enviado
+
+    notificar_correo_enviado(factura=factura, pago=pago, lote=lote, request=request, exito=bool(exito))
 
 
 def enviar_recibo_pago(request, pago):
@@ -114,10 +133,10 @@ def enviar_recibo_pago(request, pago):
     try:
         _attach_fieldfile(email, pago.comprobante)
         email.send(fail_silently=False)
-        _log_envio(tipo="individual", factura=factura, pago=pago, enviado_a=destinatario, asunto=asunto, exito=True, detalle="Enviado")
+        _log_envio(tipo="individual", factura=factura, pago=pago, enviado_a=destinatario, asunto=asunto, exito=True, detalle="Enviado", request=request)
         return True, "Enviado"
     except Exception as e:
-        _log_envio(tipo="individual", factura=factura, pago=pago, enviado_a=destinatario, asunto=asunto, exito=False, detalle=str(e))
+        _log_envio(tipo="individual", factura=factura, pago=pago, enviado_a=destinatario, asunto=asunto, exito=False, detalle=str(e), request=request)
         return False, f"Error adjuntando o enviando el comprobante: {e}"
 
 
@@ -164,9 +183,9 @@ def enviar_recibo_lote(request, lote: PagoLote):
         _attach_fieldfile(email, lote.comprobante)
         email.send(fail_silently=False)
         for pago in pagos:
-            _log_envio(tipo="lote", factura=pago.factura, pago=pago, lote=lote, enviado_a=destinatario, asunto=asunto, exito=True, detalle="Enviado")
+            _log_envio(tipo="lote", factura=pago.factura, pago=pago, lote=lote, enviado_a=destinatario, asunto=asunto, exito=True, detalle="Enviado", request=request)
         return True, "Enviado"
     except Exception as e:
         for pago in pagos:
-            _log_envio(tipo="lote", factura=pago.factura, pago=pago, lote=lote, enviado_a=destinatario, asunto=asunto, exito=False, detalle=str(e))
+            _log_envio(tipo="lote", factura=pago.factura, pago=pago, lote=lote, enviado_a=destinatario, asunto=asunto, exito=False, detalle=str(e), request=request)
         return False, f"Error adjuntando o enviando el comprobante: {e}"

@@ -1,0 +1,111 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
+
+{% block title %}Lote {{ lote.id }}{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Lote #{{ lote.id }}</h1>
+    <p>{{ lote.proveedor.nombre }} / pago por lote del {{ lote.fecha_pago|date:"d/m/Y" }}</p>
+  </div>
+  <div class="provider-pagehead__actions">
+    {% if confirmado %}
+      <span class="provider-badge provider-badge--ok">Confirmado</span>
+    {% else %}
+      <span class="provider-badge provider-badge--warn">Pendiente</span>
+    {% endif %}
+    {% if not confirmado %}
+      <form method="post" action="{% url 'portal_proveedor_lote_confirmar' lote.pk %}">
+        {% csrf_token %}
+        <button class="button warning" type="submit">Confirmar lote</button>
+      </form>
+    {% endif %}
+    <a class="button danger" href="{% url 'portal_proveedor_lote_novedad' lote.pk %}">Reportar novedad</a>
+  </div>
+</section>
+
+<section class="provider-meta-grid">
+  <div class="provider-meta-card">
+    <span>Proveedor</span>
+    <strong>{{ lote.proveedor.nombre }}</strong>
+  </div>
+  <div class="provider-meta-card">
+    <span>Fecha de pago</span>
+    <strong>{{ lote.fecha_pago|date:"d/m/Y" }}</strong>
+  </div>
+  <div class="provider-meta-card">
+    <span>Tipo de lote</span>
+    <strong>Monoproveedor</strong>
+  </div>
+</section>
+
+<section class="provider-kpis">
+  <div class="provider-kpi">
+    <span>Total del lote</span>
+    <strong>${{ total|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Facturas incluidas</span>
+    <strong>{{ facturas|length }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Confirmacion</span>
+    <strong>{% if confirmado %}Confirmado{% else %}Pendiente{% endif %}</strong>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head"><h2>Pagos incluidos</h2></div>
+  <div class="provider-table-wrap">
+    <table class="provider-table">
+      <thead>
+        <tr>
+          <th>Factura</th>
+          <th>Punto de venta</th>
+          <th>Fecha</th>
+          <th class="provider-table__money">Valor</th>
+          <th>Comprobante</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for pago in pagos %}
+        <tr>
+          <td><a href="{% url 'portal_proveedor_factura_detail' pago.factura_id %}">{{ pago.factura.numero_factura }}</a></td>
+          <td>{{ pago.factura.punto_venta.nombre }}</td>
+          <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+          <td class="provider-table__money">${{ pago.valor_pagado|miles }}</td>
+          <td>{% if pago.comprobante %}<a class="button outline small" href="{% url 'portal_proveedor_comprobante' pago.pk %}">Ver comprobante</a>{% else %}<span class="muted">No disponible</span>{% endif %}</td>
+          <td>
+            {% if pago.factura.confirmado_pago %}
+              <span class="provider-badge provider-badge--ok">Confirmado</span>
+            {% else %}
+              <span class="provider-badge provider-badge--warn">Por confirmar</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td class="provider-table__empty" colspan="6">No hay pagos en este lote.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head"><h2>Novedades del lote</h2></div>
+  <div class="provider-list">
+    {% for evento in novedades %}
+      <div class="provider-list__item">
+        <div class="provider-list__content">
+          <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+          <span>{{ evento.metadata.detalle }}</span>
+        </div>
+      </div>
+    {% empty %}
+      <p class="provider-empty">No hay novedades registradas para este lote.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

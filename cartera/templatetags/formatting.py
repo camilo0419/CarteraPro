@@ -1,5 +1,7 @@
 from django import template
 
+from cartera.scoping import get_user_pdv
+
 register = template.Library()
 
 @register.filter
@@ -26,9 +28,4 @@ def user_pv(context):
     """
     request = context.get("request")
     user = getattr(request, "user", None)
-    if not user or not user.is_authenticated or user.is_staff or user.is_superuser:
-        return None
-    try:
-        return user.pv_map.punto_venta
-    except Exception:
-        return None
+    return get_user_pdv(user)

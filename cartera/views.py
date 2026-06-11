@@ -6,10 +6,10 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction
-from django.db.models import Avg, Count, F, FloatField, Q, Sum
+from django.db.models import Count, F, Prefetch, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,49 +18,27 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.generic import CreateView, DetailView, TemplateView, UpdateView, View
 from rest_framework import filters, permissions, viewsets
+from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .forms import FacturaForm, PagoComprobanteForm, PagoForm, PagoLoteForm
-from .models import CorreoEnvioLog, Factura, Pago, PagoLote, Proveedor, PuntoVenta, PuntoVentaUsuario
+from .models import CorreoEnvioLog, Factura, PAGO_LOTE_MONOPROVEEDOR_ERROR, Pago, PagoLote, Proveedor, PuntoVenta
+from .scoping import ensure_user_scope, get_user_pdv, is_global_user, scoped_facturas, scoped_pagos
 from .serializers import FacturaSerializer, PagoSerializer, ProveedorSerializer
-from .utils import enviar_recibo_lote, enviar_recibo_pago, validar_token, validar_token_lote
+from .services.invoices import guardar_factura_desde_form
+from .services.payments import (
+    confirmar_factura,
+    confirmar_lote,
+    crear_pago,
+    eliminar_pago_seguro,
+    enviar_correo_lote_si_aplica,
+    enviar_correo_pago_si_aplica,
+)
+from .utils import validar_token, validar_token_lote
 
 # fix accidental import name typo if referenced elsewhere
 ALERTA_FACTURA = Decimal("1000000")
-
-
-def get_user_pdv(user):
-    if not user or not user.is_authenticated or user.is_staff or user.is_superuser:
-        return None
-    try:
-        return user.pv_map.punto_venta
-    except PuntoVentaUsuario.DoesNotExist:
-        return None
-
-
-def ensure_user_scope(user):
-    if user.is_staff or user.is_superuser:
-        return None
-    pv = get_user_pdv(user)
-    if not pv:
-        raise PermissionDenied("El usuario no tiene un Punto de Venta asignado.")
-    return pv
-
-
-def scoped_facturas(user):
-    qs = Factura.objects.select_related("proveedor", "punto_venta")
-    pv = ensure_user_scope(user)
-    if pv:
-        qs = qs.filter(punto_venta=pv)
-    return qs
-
-
-def scoped_pagos(user):
-    qs = Pago.objects.select_related("factura", "factura__proveedor", "factura__punto_venta", "lote")
-    pv = ensure_user_scope(user)
-    if pv:
-        qs = qs.filter(factura__punto_venta=pv)
-    return qs
 
 
 def _d(value, fallback):
@@ -119,7 +97,7 @@ def _base_factura_filters(request, qs, include_estado=None):
 
     if prov.isdigit():
         qs = qs.filter(proveedor_id=int(prov))
-    if pdv.isdigit() and request.user.is_staff:
+    if pdv.isdigit() and is_global_user(request.user):
         qs = qs.filter(punto_venta_id=int(pdv))
 
     if confirmacion == "si":
@@ -164,6 +142,14 @@ def _paginate(request, qs, per_page=50):
     return items
 
 
+def _attach_payment_dates(facturas):
+    for factura in facturas:
+        pagos = getattr(factura, "pagos_ordenados", None)
+        pago = pagos[0] if pagos else factura.pagos.order_by("-fecha_pago", "-id").first()
+        factura.fecha_pago_mostrada = pago.fecha_pago if pago else None
+    return facturas
+
+
 def _factura_listing_context(request, qs, title, include_estado=None, show_estado_filter=True, show_confirm_filter=False, template_tab=""):
     qs = _base_factura_filters(request, qs, include_estado=include_estado)
     page_obj = _paginate(request, qs, per_page=50)
@@ -174,7 +160,7 @@ def _factura_listing_context(request, qs, title, include_estado=None, show_estad
     )
     total_general = qs.aggregate(t=Sum(F("valor_factura") - F("total_pagado")))["t"] or 0
     proveedores = Proveedor.objects.order_by("nombre")
-    pdvs = PuntoVenta.objects.order_by("nombre") if request.user.is_staff else []
+    pdvs = PuntoVenta.objects.order_by("nombre") if is_global_user(request.user) else []
     anios = list(scoped_facturas(request.user).dates("fecha_factura", "year", order="DESC"))
     return {
         "title": title,
@@ -187,6 +173,8 @@ def _factura_listing_context(request, qs, title, include_estado=None, show_estad
         "anios": [d.year for d in anios],
         "show_estado_filter": show_estado_filter,
         "show_confirm_filter": show_confirm_filter,
+        "show_payment_date": False,
+        "date_column_label": "Fecha",
         "tab": template_tab,
         "filters": {
             "q": request.GET.get("q", ""),
@@ -237,10 +225,17 @@ def facturas_pendientes_view(request):
 
 @login_required
 def pagos_list_view(request):
-    qs = _base_factura_filters(request, scoped_facturas(request.user).filter(estado="pagada"), include_estado="pagada")
+    qs = _base_factura_filters(
+        request,
+        scoped_facturas(request.user)
+        .filter(estado="pagada")
+        .prefetch_related(Prefetch("pagos", queryset=Pago.objects.order_by("-fecha_pago", "-id"), to_attr="pagos_ordenados")),
+        include_estado="pagada",
+    )
     page_obj = _paginate(request, qs, per_page=50)
+    _attach_payment_dates(page_obj.object_list)
     proveedores = Proveedor.objects.order_by("nombre")
-    pdvs = PuntoVenta.objects.order_by("nombre") if request.user.is_staff else []
+    pdvs = PuntoVenta.objects.order_by("nombre") if is_global_user(request.user) else []
     anios = list(scoped_facturas(request.user).dates("fecha_factura", "year", order="DESC"))
     return render(request, "cartera/facturas_list.html", {
         "title": "Facturas pagadas",
@@ -251,6 +246,8 @@ def pagos_list_view(request):
         "anios": [d.year for d in anios],
         "show_estado_filter": False,
         "show_confirm_filter": True,
+        "show_payment_date": True,
+        "date_column_label": "Fecha de pago",
         "tab": "pagadas",
         "filters": {
             "q": request.GET.get("q", ""),
@@ -341,22 +338,13 @@ class FacturaUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         factura = form.save(commit=False)
-        if (factura.estado or "").lower() == "pagada":
-            factura.total_pagado = factura.valor_factura or Decimal("0")
-        else:
-            factura.estado = "pendiente"
-            factura.total_pagado = Decimal("0")
-        factura.save()
-
-        if factura.estado == "pagada" and not factura.pagos.exists():
-            pagado_por = f"PDV - {factura.punto_venta.nombre}" if factura.punto_venta else "OFICINA"
-            Pago.objects.create(
-                factura=factura,
-                fecha_pago=timezone.localdate(),
-                valor_pagado=factura.valor_factura or Decimal("0"),
-                pagado_por=pagado_por,
-                notas="Pago auto-generado al marcar la factura como PAGADA en edición (contado en PDV).",
-            )
+        factura = guardar_factura_desde_form(
+            factura,
+            created=False,
+            usuario=self.request.user,
+            request=self.request,
+            auto_payment_note="Pago auto-generado al marcar la factura como PAGADA en edicion (contado en PDV).",
+        )
 
         messages.success(self.request, "Factura actualizada correctamente.")
         if factura.estado == "pagada":
@@ -387,26 +375,13 @@ class FacturaCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         factura = form.save(commit=False)
-        if not factura.creado_por_id:
-            factura.creado_por = self.request.user
-
-        if (factura.estado or "").lower() == "pagada":
-            factura.total_pagado = factura.valor_factura or Decimal("0")
-        else:
-            factura.estado = "pendiente"
-            factura.total_pagado = Decimal("0")
-
-        factura.save()
-
-        if factura.estado == "pagada" and not factura.pagos.exists():
-            pagado_por = f"PDV - {factura.punto_venta.nombre}" if factura.punto_venta else "OFICINA"
-            Pago.objects.create(
-                factura=factura,
-                fecha_pago=timezone.localdate(),
-                valor_pagado=factura.valor_factura or Decimal("0"),
-                pagado_por=pagado_por,
-                notas="Pago auto-generado al crear la factura como PAGADA (contado en PDV).",
-            )
+        factura = guardar_factura_desde_form(
+            factura,
+            created=True,
+            usuario=self.request.user,
+            request=self.request,
+            auto_payment_note="Pago auto-generado al crear la factura como PAGADA (contado en PDV).",
+        )
 
         messages.success(self.request, "Factura creada correctamente.")
         if factura.estado == "pagada":
@@ -445,39 +420,37 @@ class PagoCreateView(LoginRequiredMixin, CreateView):
         return kwargs
 
     def form_valid(self, form):
-        pago = form.save(commit=False)
-        pago.factura = self.factura
-        pago.valor_pagado = self.factura.valor_factura
+        pago_form = form.save(commit=False)
+        pago = crear_pago(
+            factura=self.factura,
+            fecha_pago=pago_form.fecha_pago or timezone.localdate(),
+            valor_pagado=self.factura.valor_factura,
+            pagado_por=pago_form.pagado_por,
+            comprobante=pago_form.comprobante,
+            notas=pago_form.notas,
+            usuario=self.request.user,
+            request=self.request,
+        )
 
-        if not pago.fecha_pago:
-            pago.fecha_pago = timezone.localdate()
-
-        pago.save()
-
-        self.factura.total_pagado = (self.factura.total_pagado or 0) + pago.valor_pagado
-        self.factura.estado = "pagada" if self.factura.total_pagado >= self.factura.valor_factura else "pendiente"
-        self.factura.save(update_fields=["total_pagado", "estado"])
-
-        if _es_contado_por_notas(pago):
+        ok, info, motivo = enviar_correo_pago_si_aplica(self.request, pago)
+        if motivo == "contado":
             messages.success(self.request, "Pago registrado. No se envió correo porque corresponde a pago de contado.")
             return redirect("pagos_list")
 
-        if not (pago.comprobante and pago.comprobante.name):
+        if motivo == "sin_comprobante":
             messages.warning(
                 self.request,
                 "Pago registrado, pero no se envió correo porque no se adjuntó comprobante."
             )
             return redirect("pagos_list")
 
-        destinatario = ((self.factura.proveedor.email or "").strip() if self.factura.proveedor else "")
-        if not destinatario:
+        if motivo == "sin_email":
             messages.warning(
                 self.request,
                 "Pago registrado, pero no se envió correo porque el proveedor no tiene email."
             )
             return redirect("pagos_list")
 
-        ok, info = enviar_recibo_pago(self.request, pago)
         if ok:
             messages.success(self.request, "Pago registrado y correo enviado al proveedor.")
         else:
@@ -530,7 +503,7 @@ class PagoEnviarEmailView(LoginRequiredMixin, View):
         if not (pago.comprobante and pago.comprobante.name):
             messages.error(request, "Este pago no tiene comprobante adjunto.")
             return redirect("factura_detalle", pk=pago.factura.id)
-        ok, info = enviar_recibo_pago(request, pago)
+        ok, info, _motivo = enviar_correo_pago_si_aplica(request, pago)
         if ok:
             messages.success(request, "Comprobante enviado al proveedor.")
         else:
@@ -539,25 +512,45 @@ class PagoEnviarEmailView(LoginRequiredMixin, View):
 
 
 class ConfirmarPagoView(View):
-    def get(self, request, token):
+    template_name = "cartera/confirmacion_publica.html"
+
+    def _get_pago(self, token):
         ok, valor = validar_token(token)
         if not ok:
-            return render(request, "cartera/confirmacion_error.html", {"motivo": "El enlace no es válido o expiró."}, status=400)
+            return None, "El enlace no es válido o expiró.", 400
         try:
             pago = Pago.objects.select_related("factura__proveedor").get(id=valor)
         except Pago.DoesNotExist:
-            return render(request, "cartera/confirmacion_error.html", {"motivo": "No encontramos el pago asociado a este enlace."}, status=404)
+            return None, "No encontramos el pago asociado a este enlace.", 404
+        return pago, "", 200
+
+    def get(self, request, token):
+        pago, motivo, status_code = self._get_pago(token)
+        if not pago:
+            return render(request, "cartera/confirmacion_error.html", {"motivo": motivo}, status=status_code)
         factura = pago.factura
-        if not factura.confirmado_pago:
-            factura.confirmado_pago = True
-            factura.confirmado_fecha = timezone.now()
-            factura.confirmado_por_email = factura.proveedor.email
-            factura.save(update_fields=["confirmado_pago", "confirmado_fecha", "confirmado_por_email"])
-        return render(request, "cartera/confirmacion_publica.html", {
+        return render(request, self.template_name, {
             "proveedor": factura.proveedor,
             "numero_factura": factura.numero_factura,
             "valor_factura": factura.valor_factura,
             "fecha_confirmacion": factura.confirmado_fecha,
+            "ya_confirmado": factura.confirmado_pago,
+            "requiere_confirmacion": not factura.confirmado_pago,
+        }, status=200)
+
+    def post(self, request, token):
+        pago, motivo, status_code = self._get_pago(token)
+        if not pago:
+            return render(request, "cartera/confirmacion_error.html", {"motivo": motivo}, status=status_code)
+        factura = pago.factura
+        factura = confirmar_factura(factura, pago=pago, request=request)
+        return render(request, self.template_name, {
+            "proveedor": factura.proveedor,
+            "numero_factura": factura.numero_factura,
+            "valor_factura": factura.valor_factura,
+            "fecha_confirmacion": factura.confirmado_fecha,
+            "ya_confirmado": True,
+            "requiere_confirmacion": False,
         }, status=200)
 
 
@@ -587,7 +580,7 @@ class PagoLoteCreateView(LoginRequiredMixin, View):
             return redirect("facturas_pendientes")
         prov = facturas[0].proveedor
         if any(f.proveedor_id != prov.id for f in facturas):
-            messages.error(request, "Debes seleccionar facturas del mismo proveedor.")
+            messages.error(request, PAGO_LOTE_MONOPROVEEDOR_ERROR)
             return redirect("facturas_pendientes")
         total = sum((f.valor_factura or 0) for f in facturas)
         form = PagoLoteForm(user=request.user, pdv_default=facturas[0].punto_venta, initial={"fecha_pago": timezone.localdate()})
@@ -607,7 +600,7 @@ class PagoLoteCreateView(LoginRequiredMixin, View):
             return redirect("facturas_pendientes")
         prov = facturas[0].proveedor
         if any(f.proveedor_id != prov.id for f in facturas):
-            messages.error(request, "Debes seleccionar facturas del mismo proveedor.")
+            messages.error(request, PAGO_LOTE_MONOPROVEEDOR_ERROR)
             return redirect("facturas_pendientes")
         form = PagoLoteForm(request.POST, request.FILES, user=request.user, pdv_default=facturas[0].punto_venta)
         if not form.is_valid():
@@ -620,9 +613,8 @@ class PagoLoteCreateView(LoginRequiredMixin, View):
             lote.proveedor = prov
             lote.save()
             comp_name = lote.comprobante.name if getattr(lote, "comprobante", None) else None
-            pagos_creados = []
             for f in facturas:
-                pagos_creados.append(Pago(
+                crear_pago(
                     factura=f,
                     fecha_pago=lote.fecha_pago,
                     valor_pagado=f.valor_factura or Decimal("0"),
@@ -630,12 +622,10 @@ class PagoLoteCreateView(LoginRequiredMixin, View):
                     lote=lote,
                     notas=f"Pago perteneciente al Lote #{lote.id}.",
                     comprobante=comp_name or None,
-                ))
-                f.total_pagado = f.valor_factura or Decimal("0")
-                f.estado = "pagada"
-            Pago.objects.bulk_create(pagos_creados)
-            Factura.objects.bulk_update(facturas, ["total_pagado", "estado"])
-        ok, info = enviar_recibo_lote(request, lote)
+                    usuario=request.user,
+                    request=request,
+                )
+        ok, info, _motivo = enviar_correo_lote_si_aplica(request, lote)
         if ok:
             messages.success(request, f"Lote #{lote.id} creado y correo enviado.")
         else:
@@ -644,39 +634,76 @@ class PagoLoteCreateView(LoginRequiredMixin, View):
 
 
 class ConfirmarPagoLoteView(View):
-    def get(self, request, token):
+    template_name = "cartera/confirmacion_publica_lote.html"
+
+    def _get_lote(self, token):
         ok, lote_id = validar_token_lote(token)
         if not ok:
-            return render(request, "cartera/confirmacion_error.html", {"motivo": "El enlace no es válido o expiró."}, status=400)
+            return None, "El enlace no es válido o expiró.", 400
         try:
-            lote = PagoLote.objects.select_related("proveedor").prefetch_related("pagos__factura").get(pk=lote_id)
+            lote = PagoLote.objects.select_related("proveedor").prefetch_related("pagos__factura__punto_venta").get(pk=lote_id)
         except PagoLote.DoesNotExist:
-            return render(request, "cartera/confirmacion_error.html", {"motivo": "No encontramos el lote asociado a este enlace."}, status=404)
-        ahora = timezone.now()
-        for pago in lote.pagos.all():
-            factura = pago.factura
-            if not factura.confirmado_pago:
-                factura.confirmado_pago = True
-                factura.confirmado_fecha = ahora
-                factura.confirmado_por_email = lote.proveedor.email
-                factura.save(update_fields=["confirmado_pago", "confirmado_fecha", "confirmado_por_email"])
-        total_lote = sum((p.valor_pagado or Decimal("0")) for p in lote.pagos.all())
-        return render(request, "cartera/confirmacion_publica_lote.html", {
+            return None, "No encontramos el lote asociado a este enlace.", 404
+        return lote, "", 200
+
+    def get(self, request, token):
+        lote, motivo, status_code = self._get_lote(token)
+        if not lote:
+            return render(request, "cartera/confirmacion_error.html", {"motivo": motivo}, status=status_code)
+        pagos = list(lote.pagos.all())
+        total_lote = sum((p.valor_pagado or Decimal("0")) for p in pagos)
+        ya_confirmado = bool(pagos) and all(p.factura.confirmado_pago for p in pagos)
+        fecha_confirmacion = next((p.factura.confirmado_fecha for p in pagos if p.factura.confirmado_fecha), None)
+        return render(request, self.template_name, {
             "proveedor": lote.proveedor,
             "lote": lote,
-            "facturas": [p.factura for p in lote.pagos.all()],
+            "facturas": [p.factura for p in pagos],
+            "fecha_confirmacion": fecha_confirmacion,
+            "total": total_lote,
+            "ya_confirmado": ya_confirmado,
+            "requiere_confirmacion": not ya_confirmado,
+        }, status=200)
+
+    def post(self, request, token):
+        lote, motivo, status_code = self._get_lote(token)
+        if not lote:
+            return render(request, "cartera/confirmacion_error.html", {"motivo": motivo}, status=status_code)
+        ahora, pagos = confirmar_lote(lote, request=request)
+        total_lote = sum((p.valor_pagado or Decimal("0")) for p in pagos)
+        return render(request, self.template_name, {
+            "proveedor": lote.proveedor,
+            "lote": lote,
+            "facturas": [p.factura for p in pagos],
             "fecha_confirmacion": ahora,
             "total": total_lote,
+            "ya_confirmado": True,
+            "requiere_confirmacion": False,
         }, status=200)
 
 
 class ProveedorViewSet(viewsets.ModelViewSet):
-    queryset = Proveedor.objects.all()
+    queryset = Proveedor.objects.all().order_by("nombre", "id")
     serializer_class = ProveedorSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["nombre", "nit", "email"]
     ordering_fields = ["nombre", "nit", "creado_en"]
+
+    def _ensure_write_allowed(self):
+        if not is_global_user(self.request.user):
+            raise DRFPermissionDenied("Solo un usuario administrador puede modificar proveedores.")
+
+    def perform_create(self, serializer):
+        self._ensure_write_allowed()
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._ensure_write_allowed()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._ensure_write_allowed()
+        instance.delete()
 
 
 class FacturaViewSet(viewsets.ModelViewSet):
@@ -690,6 +717,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return scoped_facturas(self.request.user)
 
+    def perform_destroy(self, instance):
+        if instance.estado != "pendiente" or instance.pagos.exists() or instance.confirmado_pago:
+            raise DRFValidationError("Solo se pueden eliminar facturas pendientes sin pago ni confirmación.")
+        instance.delete()
+
 
 class PagoViewSet(viewsets.ModelViewSet):
     serializer_class = PagoSerializer
@@ -702,11 +734,18 @@ class PagoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return scoped_pagos(self.request.user)
 
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        try:
+            eliminar_pago_seguro(instance, usuario=self.request.user, request=self.request)
+        except ValidationError as exc:
+            raise DRFValidationError(exc.messages)
+
 
 @login_required
 def analytics_dashboard(request):
     today = date.today()
-    pv_scope = get_user_pdv(request.user) if not request.user.is_staff else None
+    pv_scope = None if is_global_user(request.user) else ensure_user_scope(request.user)
     rango = (request.GET.get("rango") or "").strip() or "mes_actual"
     if rango == "mes_actual":
         d1_def, d2_def = _month_bounds(today)
@@ -819,7 +858,7 @@ def analytics_dashboard(request):
             m = m.date()
         by_month.append({"m": m.isoformat(), "total": r["total"]})
     top_facturas = list(qs_periodo.order_by("-valor_factura").values("id", "numero_factura", "fecha_factura", "proveedor__nombre", "punto_venta__nombre", "valor_factura")[:12])
-    pdvs = PuntoVenta.objects.order_by("nombre").values("id", "nombre") if request.user.is_staff else [{"id": pv_scope.id, "nombre": pv_scope.nombre}] if pv_scope else []
+    pdvs = PuntoVenta.objects.order_by("nombre").values("id", "nombre") if is_global_user(request.user) else [{"id": pv_scope.id, "nombre": pv_scope.nombre}] if pv_scope else []
     provs = Proveedor.objects.order_by("nombre").values("id", "nombre")
     return render(request, "cartera/analytics_dashboard.html", {
         "filters": {

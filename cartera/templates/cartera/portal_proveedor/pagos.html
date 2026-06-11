@@ -1,0 +1,82 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
+
+{% block title %}Pagos proveedor{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Pagos</h1>
+    <p>Confirma recepcion, revisa comprobantes o reporta novedades.</p>
+  </div>
+</section>
+
+<section class="provider-filter-card">
+  <div class="provider-filter-card__head">
+    <h2>Filtros</h2>
+    <p>Filtra los pagos por estado de confirmacion.</p>
+  </div>
+  <form class="provider-filters" method="get">
+    <div class="provider-filter-field">
+      <label for="pago-confirmacion">Confirmacion</label>
+      <select id="pago-confirmacion" name="confirmacion">
+        <option value="">Todos</option>
+        <option value="sin_confirmar" {% if request.GET.confirmacion == "sin_confirmar" %}selected{% endif %}>Sin confirmar</option>
+        <option value="confirmados" {% if request.GET.confirmacion == "confirmados" %}selected{% endif %}>Confirmados</option>
+      </select>
+    </div>
+    <div class="provider-filter-actions">
+      <button class="button warning" type="submit">Filtrar</button>
+      <a class="button outline" href="{% url 'portal_proveedor_pagos' %}">Limpiar filtros</a>
+    </div>
+  </form>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-table-wrap">
+  <table class="provider-table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Factura</th>
+        <th>Punto de venta</th>
+        <th class="provider-table__money">Valor</th>
+        <th>Comprobante</th>
+        <th>Estado</th>
+        <th class="provider-table__actions">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for pago in pagos %}
+      <tr>
+        <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+        <td><a href="{% url 'portal_proveedor_factura_detail' pago.factura_id %}">{{ pago.factura.numero_factura }}</a></td>
+        <td>{{ pago.factura.punto_venta.nombre }}</td>
+        <td class="provider-table__money">${{ pago.valor_pagado|miles }}</td>
+        <td>{% if pago.comprobante %}<a class="button outline small" href="{% url 'portal_proveedor_comprobante' pago.pk %}">Ver comprobante</a>{% else %}<span class="muted">No disponible</span>{% endif %}</td>
+        <td>
+          {% if pago.factura.confirmado_pago %}
+            <span class="provider-badge provider-badge--ok">Confirmado</span>
+          {% else %}
+            <span class="provider-badge provider-badge--warn">Por confirmar</span>
+          {% endif %}
+        </td>
+        <td class="actions-inline">
+          {% if not pago.factura.confirmado_pago %}
+            <form method="post" action="{% url 'portal_proveedor_pago_confirmar' pago.pk %}">
+              {% csrf_token %}
+              <button class="button warning small" type="submit">Confirmar</button>
+            </form>
+          {% endif %}
+          <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Novedad</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td class="provider-table__empty" colspan="7">No hay pagos con estos filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% include "cartera/portal_proveedor/pagination.html" %}
+{% endblock %}

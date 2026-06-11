@@ -3,20 +3,13 @@ from decimal import Decimal, InvalidOperation
 from django import forms
 from django.utils import timezone
 
-from .models import Factura, Pago, PuntoVenta, PuntoVentaUsuario, PagoLote, Proveedor
+from .models import Factura, Pago, PuntoVenta, PagoLote, Proveedor
+from .scoping import get_user_pdv, is_global_user
+from .validators import validate_comprobante_file
 
 
 MAX_FACTURA = Decimal("10000000")
 ALERTA_FACTURA = Decimal("1000000")
-
-
-def get_user_pdv(user):
-    if not user or not user.is_authenticated or user.is_staff or user.is_superuser:
-        return None
-    try:
-        return user.pv_map.punto_venta
-    except PuntoVentaUsuario.DoesNotExist:
-        return None
 
 
 class ISODateInput(forms.DateInput):
@@ -34,6 +27,10 @@ class ProveedorChoiceField(forms.ModelChoiceField):
 
 class FacturaForm(forms.ModelForm):
     proveedor = ProveedorChoiceField(queryset=Proveedor.objects.all().order_by("nombre"), required=True)
+    valor_factura = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off"}),
+    )
     confirmar_valor_alto = forms.BooleanField(required=False, widget=forms.HiddenInput())
 
     class Meta:
@@ -42,7 +39,6 @@ class FacturaForm(forms.ModelForm):
         widgets = {
             "fecha_factura": ISODateInput(),
             "numero_factura": forms.TextInput(attrs={"maxlength": 50}),
-            "valor_factura": forms.TextInput(attrs={"inputmode": "numeric", "autocomplete": "off"}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -63,7 +59,7 @@ class FacturaForm(forms.ModelForm):
             except Exception:
                 pass
 
-        if user and not user.is_staff:
+        if user and not is_global_user(user):
             pv = get_user_pdv(user)
             if pv:
                 self.fields["punto_venta"].queryset = PuntoVenta.objects.filter(pk=pv.pk)
@@ -76,7 +72,7 @@ class FacturaForm(forms.ModelForm):
             self.fields["punto_venta"].queryset = PuntoVenta.objects.all().order_by("nombre")
 
     def clean_punto_venta(self):
-        if self.user and not self.user.is_staff:
+        if self.user and not is_global_user(self.user):
             pv = get_user_pdv(self.user)
             if not pv:
                 raise forms.ValidationError("No se pudo identificar el Punto de Venta del usuario.")
@@ -100,19 +96,18 @@ class FacturaForm(forms.ModelForm):
         elif isinstance(valor, str):
             raw = valor.strip()
 
-            # FIX: soportar estos casos correctamente:
-            # "300000"
-            # "300.000"
-            # "300000.00"
-            # "300.000,00"
             raw = raw.replace(" ", "")
 
-            if raw.endswith(".00"):
-                raw = raw[:-3]
-            elif raw.endswith(",00"):
-                raw = raw[:-3]
-
-            raw = raw.replace(".", "").replace(",", "")
+            if "," in raw:
+                raw = raw.replace(".", "").replace(",", ".")
+            elif "." in raw:
+                parts = raw.split(".")
+                if len(parts) > 2:
+                    raw = "".join(parts)
+                elif len(parts) == 2 and len(parts[1]) == 2 and len(parts[0]) > 3:
+                    raw = ".".join(parts)
+                else:
+                    raw = "".join(parts)
 
             try:
                 valor_decimal = Decimal(raw or "0")
@@ -170,7 +165,7 @@ class PagoForm(forms.ModelForm):
             self.fields["valor_pagado"].initial = factura.valor_factura
         if not self.data:
             self.fields["fecha_pago"].initial = timezone.localdate()
-        if user and user.is_staff:
+        if is_global_user(user):
             choices = [("OFICINA", "OFICINA")]
             for pv in PuntoVenta.objects.order_by("nombre"):
                 etiqueta = f"PDV - {pv.nombre}"
@@ -192,7 +187,7 @@ class PagoForm(forms.ModelForm):
 
     def clean_pagado_por(self):
         seleccionado = self.cleaned_data.get("pagado_por")
-        if self.user and self.user.is_staff:
+        if is_global_user(self.user):
             if seleccionado == "OFICINA":
                 return seleccionado
             if seleccionado and seleccionado.startswith("PDV - "):
@@ -208,6 +203,11 @@ class PagoForm(forms.ModelForm):
             return seleccionado
         raise forms.ValidationError("No tiene permiso para registrar pagos a nombre de otro punto.")
 
+    def clean_comprobante(self):
+        comprobante = self.cleaned_data.get("comprobante")
+        validate_comprobante_file(comprobante)
+        return comprobante
+
 
 class PagoComprobanteForm(forms.ModelForm):
     class Meta:
@@ -216,6 +216,11 @@ class PagoComprobanteForm(forms.ModelForm):
         widgets = {
             "comprobante": forms.ClearableFileInput(attrs={"accept": "image/*,application/pdf", "capture": "environment"})
         }
+
+    def clean_comprobante(self):
+        comprobante = self.cleaned_data.get("comprobante")
+        validate_comprobante_file(comprobante)
+        return comprobante
 
 
 class PagoLoteForm(forms.ModelForm):
@@ -236,7 +241,7 @@ class PagoLoteForm(forms.ModelForm):
         if not self.data.get("fecha_pago") and not self.initial.get("fecha_pago"):
             self.initial["fecha_pago"] = timezone.localdate()
 
-        if user and user.is_staff:
+        if is_global_user(user):
             all_pv = [(f"PDV - {pv.nombre}", f"PDV - {pv.nombre}") for pv in PuntoVenta.objects.order_by("nombre")]
             base = [("OFICINA", "OFICINA")]
             valor_pdv = None
@@ -270,7 +275,7 @@ class PagoLoteForm(forms.ModelForm):
 
     def clean_pagado_por(self):
         seleccionado = self.cleaned_data.get("pagado_por")
-        if self.user and self.user.is_staff:
+        if is_global_user(self.user):
             if seleccionado == "OFICINA":
                 return seleccionado
             if seleccionado and seleccionado.startswith("PDV - "):
@@ -285,3 +290,26 @@ class PagoLoteForm(forms.ModelForm):
         if etiqueta_pdv and seleccionado == etiqueta_pdv:
             return seleccionado
         raise forms.ValidationError("No tiene permiso para registrar pagos a nombre de otro punto.")
+
+    def clean_comprobante(self):
+        comprobante = self.cleaned_data.get("comprobante")
+        validate_comprobante_file(comprobante)
+        return comprobante
+
+
+class NovedadProveedorForm(forms.Form):
+    MOTIVOS = [
+        ("valor_no_coincide", "Valor no coincide"),
+        ("comprobante_no_abre", "Comprobante no abre"),
+        ("no_identifico_pago", "No identifico el pago"),
+        ("factura_no_corresponde", "Factura no corresponde"),
+        ("pago_parcial", "Pago recibido parcialmente"),
+        ("otro", "Otro"),
+    ]
+
+    motivo = forms.ChoiceField(choices=MOTIVOS)
+    detalle = forms.CharField(
+        required=True,
+        widget=forms.Textarea(attrs={"rows": 4, "maxlength": 1000}),
+        max_length=1000,
+    )

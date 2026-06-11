@@ -1,0 +1,44 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+
+{% block title %}Notificaciones proveedor{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Notificaciones</h1>
+    <p>Seguimiento de pagos, correos, confirmaciones y novedades.</p>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head">
+    <div>
+      <h2>Bandeja de notificaciones</h2>
+      <p class="provider-panel__summary">Mensajes operativos asociados a pagos, lotes y novedades.</p>
+    </div>
+  </div>
+  <div class="provider-list">
+    {% for notif in notificaciones %}
+      <div class="provider-list__item {% if not notif.leida %}is-unread{% endif %}">
+        <div class="provider-list__content">
+          {% if notif.leida %}
+            <span class="provider-badge provider-badge--wait">Leida</span>
+          {% else %}
+            <span class="provider-badge provider-badge--warn">No leida</span>
+          {% endif %}
+          <strong>{{ notif.titulo }}</strong>
+          <span>{{ notif.mensaje }}</span>
+          <small>{{ notif.creada_en|date:"d/m/Y H:i" }}</small>
+        </div>
+        <form class="provider-list__actions" method="post" action="{% url 'portal_proveedor_notificacion_leer' notif.pk %}">
+          {% csrf_token %}
+          <button class="button outline small" type="submit">{% if notif.leida %}Abrir{% else %}Leer{% endif %}</button>
+        </form>
+      </div>
+    {% empty %}
+      <p class="provider-empty">No hay notificaciones.</p>
+    {% endfor %}
+  </div>
+</section>
+{% include "cartera/portal_proveedor/pagination.html" %}
+{% endblock %}

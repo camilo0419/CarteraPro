@@ -1,5 +1,16 @@
 from django.contrib import admin
-from .models import PuntoVenta, Proveedor, Factura, Pago, PuntoVentaUsuario, PagoLote, CorreoEnvioLog
+from .models import (
+    CorreoEnvioLog,
+    EventoAuditoria,
+    Factura,
+    NotificacionProveedor,
+    Pago,
+    PagoLote,
+    Proveedor,
+    ProveedorUsuario,
+    PuntoVenta,
+    PuntoVentaUsuario,
+)
 
 
 @admin.register(PuntoVenta)
@@ -12,6 +23,15 @@ class PuntoVentaAdmin(admin.ModelAdmin):
 class ProveedorAdmin(admin.ModelAdmin):
     list_display = ("nombre", "nit", "email", "telefono", "creado_en")
     search_fields = ("nombre", "nit", "email")
+
+
+@admin.register(ProveedorUsuario)
+class ProveedorUsuarioAdmin(admin.ModelAdmin):
+    list_display = ("user", "proveedor", "activo", "puede_confirmar_pagos", "recibe_notificaciones", "actualizado_en")
+    list_filter = ("proveedor", "activo", "puede_confirmar_pagos", "recibe_notificaciones")
+    search_fields = ("user__username", "user__email", "proveedor__nombre", "proveedor__nit")
+    list_select_related = ("user", "proveedor")
+    ordering = ("proveedor__nombre", "user__username")
 
 
 @admin.register(Factura)
@@ -61,3 +81,29 @@ class CorreoEnvioLogAdmin(admin.ModelAdmin):
     search_fields = ("factura__numero_factura", "enviado_a", "asunto", "detalle", "lote__id")
     list_select_related = ("factura", "lote")
     ordering = ("-creado_en", "-id")
+
+
+@admin.register(EventoAuditoria)
+class EventoAuditoriaAdmin(admin.ModelAdmin):
+    list_display = ("id", "tipo", "factura", "pago", "lote", "usuario", "ip_address", "creado_en")
+    list_filter = ("tipo", "creado_en")
+    search_fields = (
+        "factura__numero_factura",
+        "pago__id",
+        "lote__id",
+        "usuario__username",
+        "ip_address",
+        "user_agent",
+    )
+    list_select_related = ("factura", "pago", "lote", "usuario")
+    readonly_fields = ("tipo", "factura", "pago", "lote", "usuario", "creado_en", "metadata", "ip_address", "user_agent")
+    ordering = ("-creado_en", "-id")
+
+
+@admin.register(NotificacionProveedor)
+class NotificacionProveedorAdmin(admin.ModelAdmin):
+    list_display = ("id", "tipo", "titulo", "proveedor", "usuario", "leida", "creada_en")
+    list_filter = ("tipo", "leida", "proveedor", "creada_en")
+    search_fields = ("titulo", "mensaje", "proveedor__nombre", "usuario__username")
+    list_select_related = ("proveedor", "usuario", "factura", "pago", "lote")
+    ordering = ("-creada_en", "-id")

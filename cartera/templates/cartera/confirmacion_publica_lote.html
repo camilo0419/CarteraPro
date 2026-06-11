@@ -4,54 +4,82 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Pago confirmado</title>
+  <title>Confirmación de pago por lote</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'cartera/img/favicon-32.png' %}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'cartera/img/favicon-32.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'cartera/img/favicon-32.png' %}">
-  <link rel="shortcut icon" href="{% static 'cartera/img/favicon-32.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'cartera/favicon/apple-touch-icon.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'cartera/favicon/favicon-32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'cartera/favicon/favicon-16x16.png' %}">
+  <link rel="manifest" href="{% static 'cartera/favicon/site.webmanifest' %}">
+  <link rel="shortcut icon" href="{% static 'cartera/favicon/favicon.ico' %}">
   <meta name="theme-color" content="#C62828">
-
   <style>
-    body{margin:0;padding:24px;background:#FFF7E6;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#1F1F1F}
-    .card{max-width:680px;margin:0 auto;background:#fff;border:1px solid #E5E5E5;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
-    .header{padding:18px 22px;border-bottom:1px solid #E5E5E5;display:flex;align-items:center;gap:10px}
-    .header .check{width:28px;height:28px;border-radius:6px;background:#e9f7ef;display:grid;place-items:center;color:#2E7D32;font-weight:900}
-    .h1{font-size:22px;margin:0}
-    .content{padding:20px 22px}
-    .muted{color:#666}
-    .list{margin:8px 0 0 20px}
-    .hr{border-top:1px solid #EDEDED;margin:14px 0}
-    .kv{margin:6px 0}
-    @media (max-width:520px){ .content,.header{padding:16px} }
+    :root{--red:#c62828;--amber:#ffb300;--ink:#1f1f1f;--muted:#666;--line:#eadfce;--bg:#f7f1e8;--ok:#2e7d32}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);display:grid;place-items:center;padding:24px}
+    .card{width:min(760px,100%);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(31,31,31,.10);overflow:hidden}
+    .head{padding:22px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#fffaf2)}
+    .eyebrow{margin:0 0 6px;color:var(--red);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+    h1{margin:0;font-size:24px;line-height:1.2}
+    .body{padding:22px 24px}
+    .summary{display:grid;gap:10px;margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:8px;background:#fffdf8}
+    .row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #f2eadf;padding-bottom:8px}
+    .row:last-child{border-bottom:0;padding-bottom:0}
+    .label{color:var(--muted)}
+    .value{font-weight:700;text-align:right}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th,td{padding:10px;border-bottom:1px solid #f0e7dc;text-align:left}
+    th{font-size:12px;text-transform:uppercase;color:var(--muted);background:#fff8ed}
+    .money{text-align:right}
+    .note{color:var(--muted);font-size:14px;line-height:1.45}
+    .ok{color:var(--ok);font-weight:800}
+    .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+    .button{appearance:none;border:1px solid var(--red);background:var(--red);color:#fff;border-radius:8px;padding:11px 16px;font-weight:800;cursor:pointer}
+    .button.secondary{border-color:var(--line);background:#fff;color:var(--ink)}
+    @media (max-width:620px){body{padding:14px}.head,.body{padding:18px}.row{display:block}.value{text-align:left;margin-top:3px}.actions{justify-content:stretch}.button{width:100%}table{font-size:14px}}
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="header">
-      <div class="check">✓</div>
-      <h1 class="h1">Pago confirmado</h1>
-    </div>
-
-    <div class="content">
-      <div class="kv"><b>Proveedor:</b> {{ proveedor.nombre }}</div>
-      <div class="kv"><b>Lote:</b> #{{ lote.id }} — {{ lote.creado|date:"d/m/Y H:i" }}</div>
-      {% if fecha_confirmacion %}
-      <div class="kv muted">Fecha de confirmación: {{ fecha_confirmacion|date:"d/m/Y H:i" }}</div>
+  <main class="card">
+    <section class="head">
+      <p class="eyebrow">Cartera Pro</p>
+      <h1>{% if ya_confirmado %}Lote confirmado{% else %}Confirmar recepción de pago por lote{% endif %}</h1>
+    </section>
+    <section class="body">
+      {% if requiere_confirmacion %}
+        <p>Por seguridad, el enlace no confirma automáticamente. Revisa el lote y confirma la recepción.</p>
+      {% else %}
+        <p class="ok">La confirmación de recepción ya quedó registrada para este lote.</p>
       {% endif %}
 
-      <div class="hr"></div>
+      <div class="summary">
+        <div class="row"><span class="label">Proveedor</span><span class="value">{{ proveedor.nombre }}</span></div>
+        <div class="row"><span class="label">Lote</span><span class="value">#{{ lote.id }}</span></div>
+        <div class="row"><span class="label">Total</span><span class="value">${{ total|miles }}</span></div>
+        {% if fecha_confirmacion %}
+          <div class="row"><span class="label">Fecha de confirmación</span><span class="value">{{ fecha_confirmacion|date:"d/m/Y H:i" }}</span></div>
+        {% endif %}
+      </div>
 
-      <h3 style="margin:0 0 8px 0;">Facturas incluidas</h3>
-      <ul class="list">
-        {% for f in facturas %}
-          <li>{{ f.numero_factura }} — ${{ f.valor_factura|miles }} — {{ f.punto_venta.nombre }}</li>
-        {% endfor %}
-      </ul>
+      <table>
+        <thead><tr><th>Factura</th><th>Punto de venta</th><th class="money">Valor</th></tr></thead>
+        <tbody>
+          {% for f in facturas %}
+            <tr><td>{{ f.numero_factura }}</td><td>{{ f.punto_venta.nombre }}</td><td class="money">${{ f.valor_factura|miles }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
 
-      <p style="margin-top:16px">¡Gracias!</p>
-    </div>
-  </div>
+      <p class="note">Si no reconoces este lote, no confirmes y comunícate con el equipo de cartera.</p>
+
+      {% if requiere_confirmacion %}
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <button type="submit" class="button">Confirmar recepción</button>
+        </form>
+      {% else %}
+        <div class="actions"><button type="button" class="button secondary" disabled>Confirmación registrada</button></div>
+      {% endif %}
+    </section>
+  </main>
 </body>
 </html>

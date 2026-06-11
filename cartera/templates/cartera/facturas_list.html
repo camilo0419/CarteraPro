@@ -33,7 +33,7 @@
     <thead>
       <tr>
         {% if tab == 'pendientes' %}<th style="width:56px"></th>{% endif %}
-        <th>Fecha</th><th>N.º</th><th>Proveedor</th><th>Punto de venta</th><th class="col-money">Valor</th><th>Estado</th><th>Confirmación</th><th>Acciones</th>
+        <th>{{ date_column_label|default:"Fecha" }}</th><th>N.º</th><th>Proveedor</th><th>Punto de venta</th><th class="col-money">Valor</th><th>Estado</th><th>Confirmación</th><th>Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -42,7 +42,13 @@
         {% if tab == 'pendientes' %}
         <td>{% if f.estado == 'pendiente' and not f.pagos.all|length %}<input type="checkbox" class="cb-fact" value="{{ f.id }}" data-proveedor="{{ f.proveedor.id }}" data-proveedor-nombre="{{ f.proveedor.nombre }}" data-saldo="{{ f.saldo|floatformat:0 }}">{% endif %}</td>
         {% endif %}
-        <td>{{ f.fecha_factura|date:"d/m/Y" }}</td>
+        <td>
+          {% if show_payment_date %}
+            {% if f.fecha_pago_mostrada %}{{ f.fecha_pago_mostrada|date:"d/m/Y" }}{% else %}<span class="muted">—</span>{% endif %}
+          {% else %}
+            {{ f.fecha_factura|date:"d/m/Y" }}
+          {% endif %}
+        </td>
         <td><a href="{% url 'factura_detalle' f.pk %}">{{ f.numero_factura }}</a></td>
         <td>{{ f.proveedor.nombre }}</td>
         <td>{{ f.punto_venta.nombre }}</td>

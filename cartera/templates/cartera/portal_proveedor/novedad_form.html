@@ -1,0 +1,38 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+
+{% block title %}Reportar novedad{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Reportar novedad</h1>
+    <p>Describe el inconveniente para que el equipo interno pueda revisarlo.</p>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head">
+    <div>
+      <h2>Datos de la novedad</h2>
+      <p class="provider-panel__summary">Incluye un motivo claro y el detalle necesario para revision interna.</p>
+    </div>
+  </div>
+  <form class="provider-form" method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="{{ form.motivo.id_for_label }}">Motivo</label>
+      {{ form.motivo }}
+      {{ form.motivo.errors }}
+    </div>
+    <div class="field provider-filter-field--wide">
+      <label for="{{ form.detalle.id_for_label }}">Detalle</label>
+      {{ form.detalle }}
+      {{ form.detalle.errors }}
+    </div>
+    <div class="provider-form-actions">
+      <button class="button warning" type="submit">Enviar novedad</button>
+      <a class="button outline" href="{% url 'portal_proveedor_dashboard' %}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

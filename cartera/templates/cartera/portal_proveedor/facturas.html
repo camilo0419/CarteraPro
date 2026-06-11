@@ -1,0 +1,104 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
+
+{% block title %}Facturas proveedor{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Facturas</h1>
+    <p>Consulta tus facturas y el estado de pago confirmado.</p>
+  </div>
+</section>
+
+<section class="provider-filter-card">
+  <div class="provider-filter-card__head">
+    <h2>Filtros</h2>
+    <p>Busca por numero, punto de venta, estado o rango de fechas.</p>
+  </div>
+  <form class="provider-filters" method="get">
+    <div class="provider-filter-field provider-filter-field--wide">
+      <label for="factura-q">Buscar</label>
+      <input id="factura-q" type="search" name="q" value="{{ filters.q }}" placeholder="Numero o punto de venta">
+    </div>
+    <div class="provider-filter-field">
+      <label for="factura-pdv">Punto de venta</label>
+      <input id="factura-pdv" type="search" name="pdv" value="{{ filters.pdv }}" placeholder="Nombre del PDV">
+    </div>
+    <div class="provider-filter-field">
+      <label for="factura-estado">Estado</label>
+      <select id="factura-estado" name="estado">
+        <option value="">Todos los estados</option>
+        <option value="pendiente" {% if filters.estado == "pendiente" %}selected{% endif %}>Pendientes</option>
+        <option value="pagada" {% if filters.estado == "pagada" %}selected{% endif %}>Pagadas</option>
+      </select>
+    </div>
+    <div class="provider-filter-field">
+      <label for="factura-confirmacion">Confirmacion</label>
+      <select id="factura-confirmacion" name="confirmacion">
+        <option value="">Todas</option>
+        <option value="confirmadas" {% if filters.confirmacion == "confirmadas" %}selected{% endif %}>Confirmadas</option>
+        <option value="sin_confirmar" {% if filters.confirmacion == "sin_confirmar" %}selected{% endif %}>Sin confirmar</option>
+      </select>
+    </div>
+    <div class="provider-filter-field">
+      <label for="factura-desde">Desde</label>
+      <input id="factura-desde" type="date" name="desde" value="{{ filters.desde }}">
+    </div>
+    <div class="provider-filter-field">
+      <label for="factura-hasta">Hasta</label>
+      <input id="factura-hasta" type="date" name="hasta" value="{{ filters.hasta }}">
+    </div>
+    <div class="provider-filter-actions">
+      <button class="button warning" type="submit">Filtrar</button>
+      <a class="button outline" href="{% url 'portal_proveedor_facturas' %}">Limpiar filtros</a>
+    </div>
+  </form>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-table-wrap">
+  <table class="provider-table">
+    <thead>
+      <tr>
+        <th>Numero</th>
+        <th>Punto de venta</th>
+        <th>Fecha</th>
+        <th class="provider-table__money">Valor</th>
+        <th class="provider-table__money">Pagado</th>
+        <th class="provider-table__money">Saldo</th>
+        <th>Estado</th>
+        <th>Confirmacion</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for factura in facturas %}
+      <tr>
+        <td>{{ factura.numero_factura }}</td>
+        <td>{{ factura.punto_venta.nombre }}</td>
+        <td>{{ factura.fecha_factura|date:"d/m/Y" }}</td>
+        <td class="provider-table__money">${{ factura.valor_factura|miles }}</td>
+        <td class="provider-table__money">${{ factura.total_pagado|miles }}</td>
+        <td class="provider-table__money">${{ factura.saldo|miles }}</td>
+        <td>
+          <span class="provider-badge {% if factura.estado == 'pagada' %}provider-badge--paid{% else %}provider-badge--warn{% endif %}">{{ factura.get_estado_display }}</span>
+        </td>
+        <td>
+          {% if factura.confirmado_pago %}
+            <span class="provider-badge provider-badge--ok">Confirmada</span>
+          {% else %}
+            <span class="provider-badge provider-badge--warn">Sin confirmar</span>
+          {% endif %}
+        </td>
+        <td><a class="button outline small" href="{% url 'portal_proveedor_factura_detail' factura.pk %}">Ver detalle</a></td>
+      </tr>
+    {% empty %}
+      <tr><td class="provider-table__empty" colspan="9">No hay facturas con estos filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% include "cartera/portal_proveedor/pagination.html" %}
+{% endblock %}

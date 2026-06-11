@@ -1,14 +1,53 @@
 from pathlib import Path
 import os
+import sys
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
-DEBUG = os.getenv("DEBUG", "True") == "True"
+def env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_first(*names, default=None):
+    for name in names:
+        value = os.getenv(name)
+        if value is not None and value.strip() != "":
+            return value.strip()
+    return default
+
+
+IS_TESTING = "test" in sys.argv or env_bool("DJANGO_TEST", False)
+APP_ENV = env_first("APP_ENV", "DJANGO_ENV", default="").lower()
+if IS_TESTING:
+    APP_ENV = "test"
+elif not APP_ENV:
+    if env_bool("RENDER", False) or env_bool("REQUIRE_PRODUCTION_SETTINGS", False):
+        APP_ENV = "production"
+    else:
+        APP_ENV = "local"
+
+if APP_ENV == "local" and env_bool("DJANGO_LOAD_DOTENV", True):
+    load_dotenv(BASE_DIR / ".env", override=False)
+
+REQUIRE_PRODUCTION_SETTINGS = False if APP_ENV == "test" else (
+    APP_ENV == "production" or env_bool("REQUIRE_PRODUCTION_SETTINGS", env_bool("RENDER", False))
+)
+DEBUG = env_bool("DEBUG", APP_ENV != "production")
+
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if REQUIRE_PRODUCTION_SETTINGS:
+        raise ImproperlyConfigured("SECRET_KEY es obligatoria en producción.")
+    SECRET_KEY = "dev-secret-only-for-local-development"
+elif REQUIRE_PRODUCTION_SETTINGS and len(SECRET_KEY) < 32:
+    raise ImproperlyConfigured("SECRET_KEY debe tener al menos 32 caracteres en producción.")
 
 ALLOWED_HOSTS = [
     h.strip() for h in os.getenv(
@@ -25,6 +64,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -36,17 +78,18 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = "DENY"
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.office365.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = "cartera@fogonylena.net"
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.office365.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "cartera@fogonylena.net")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Cartera Fogón & Leña")
 DEFAULT_FROM_EMAIL = f"{EMAIL_FROM_NAME} <{EMAIL_HOST_USER}>"
 
-USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "false").lower() == "true"
+USE_S3_MEDIA = env_bool("USE_S3_MEDIA", False)
+COMPROBANTE_MAX_UPLOAD_SIZE = int(os.getenv("COMPROBANTE_MAX_UPLOAD_SIZE", str(10 * 1024 * 1024)))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -92,18 +135,32 @@ TEMPLATES = [{
 
 WSGI_APPLICATION = "carterapro.wsgi.application"
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.config(conn_max_age=600, ssl_require=True)}
+if REQUIRE_PRODUCTION_SETTINGS and not DATABASE_URL:
+    raise ImproperlyConfigured("DATABASE_URL es obligatoria en producción.")
+if APP_ENV == "test":
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+elif DATABASE_URL:
+    database_url_uses_postgres = DATABASE_URL.lower().startswith(("postgres://", "postgresql://"))
+    DATABASES = {"default": dj_database_url.config(conn_max_age=600, ssl_require=database_url_uses_postgres)}
 else:
-    pg_name = os.getenv("POSTGRES_DB")
+    pg_name = env_first("POSTGRES_DB", "DB_NAME")
+    db_engine = env_first("DB_ENGINE", "DATABASE_ENGINE", "DJANGO_DB_ENGINE", default="").lower()
+    db_port = env_first("DB_PORT", default="")
+    db_vars_are_postgres = (
+        bool(env_first("POSTGRES_DB"))
+        or "postgres" in db_engine
+        or (bool(env_first("DB_NAME")) and not db_engine and db_port != "3306")
+    )
+    if not db_vars_are_postgres:
+        pg_name = None
     if pg_name:
         DATABASES = {"default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": pg_name,
-            "USER": os.getenv("POSTGRES_USER"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "USER": env_first("POSTGRES_USER", "DB_USER", default=""),
+            "PASSWORD": env_first("POSTGRES_PASSWORD", "DB_PASSWORD", default=""),
+            "HOST": env_first("POSTGRES_HOST", "DB_HOST", default="localhost"),
+            "PORT": env_first("POSTGRES_PORT", "DB_PORT", default="5432"),
             "CONN_MAX_AGE": 60,
             "OPTIONS": {"sslmode": "prefer"},
         }}
@@ -116,6 +173,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+if APP_ENV == "test":
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Bogota"
@@ -139,6 +198,8 @@ if USE_S3_MEDIA:
     AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL")
     AWS_QUERYSTRING_AUTH = True
     AWS_QUERYSTRING_EXPIRE = int(os.getenv("AWS_QUERYSTRING_EXPIRE", "3600"))
+    if REQUIRE_PRODUCTION_SETTINGS and not AWS_STORAGE_BUCKET_NAME:
+        raise ImproperlyConfigured("AWS_STORAGE_BUCKET_NAME es obligatoria cuando USE_S3_MEDIA=true.")
     STORAGES["default"] = {"BACKEND": "carterapro.storage_backends.MediaStorage"}
 
 LOGIN_URL = "login"

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+  {% load static %}
+  {% load formatting %}
+  <meta charset="utf-8">
+  <title>{% block title %}Portal de proveedores{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'cartera/favicon/apple-touch-icon.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'cartera/favicon/favicon-32x32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'cartera/favicon/favicon-16x16.png' %}">
+  <link rel="manifest" href="{% static 'cartera/favicon/site.webmanifest' %}">
+  <link rel="shortcut icon" href="{% static 'cartera/favicon/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'cartera/styles.css' %}?v=portal-proveedor-2">
+</head>
+<body class="provider-body">
+  {% with current_url=request.resolver_match.url_name %}
+  <header class="provider-header">
+    <div class="container provider-header__inner">
+      <div class="provider-brandblock">
+        <a class="provider-brand" href="{% url 'portal_proveedor_dashboard' %}">Portal de proveedores</a>
+        <div class="provider-providerline" aria-label="Proveedores asociados">
+          {% if portal_proveedores %}
+            {% for proveedor in portal_proveedores %}
+              <span class="provider-provider-badge">{{ proveedor.nombre }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="provider-provider-badge">Proveedor</span>
+          {% endif %}
+        </div>
+      </div>
+      <nav class="provider-nav" aria-label="Portal proveedor">
+        <a class="provider-nav__link {% if current_url == 'portal_proveedor_dashboard' %}is-active{% endif %}" href="{% url 'portal_proveedor_dashboard' %}">Inicio</a>
+        <a class="provider-nav__link {% if current_url == 'portal_proveedor_facturas' or current_url == 'portal_proveedor_factura_detail' %}is-active{% endif %}" href="{% url 'portal_proveedor_facturas' %}">Facturas</a>
+        <a class="provider-nav__link {% if current_url == 'portal_proveedor_pagos' or current_url == 'portal_proveedor_pago_confirmar' or current_url == 'portal_proveedor_comprobante' %}is-active{% endif %}" href="{% url 'portal_proveedor_pagos' %}">Pagos</a>
+        <a class="provider-nav__link {% if current_url == 'portal_proveedor_novedades' or current_url == 'portal_proveedor_pago_novedad' or current_url == 'portal_proveedor_lote_novedad' %}is-active{% endif %}" href="{% url 'portal_proveedor_novedades' %}">Novedades</a>
+        <a class="provider-nav__link {% if current_url == 'portal_proveedor_notificaciones' or current_url == 'portal_proveedor_notificacion_leer' %}is-active{% endif %}" href="{% url 'portal_proveedor_notificaciones' %}">Notificaciones {% if portal_unread_count %}<strong>{{ portal_unread_count }}</strong>{% endif %}</a>
+        <form class="provider-logout-form" action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="button ghost small provider-logout">Salir</button>
+        </form>
+      </nav>
+    </div>
+  </header>
+  {% endwith %}
+
+  <main class="container provider-main">
+    {% if messages %}
+      <div class="messages-wrap">
+        {% for message in messages %}
+          <div class="alert {{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

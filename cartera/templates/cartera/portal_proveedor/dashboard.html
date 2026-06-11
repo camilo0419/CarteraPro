@@ -1,0 +1,132 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
+
+{% block title %}Inicio proveedor{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Panel del proveedor</h1>
+    <p>Revisa pagos, comprobantes y confirmaciones pendientes.</p>
+  </div>
+  <div class="provider-pagehead__actions">
+    <a class="button warning" href="{% url 'portal_proveedor_pagos' %}?confirmacion=sin_confirmar">Ver pagos por confirmar</a>
+  </div>
+</section>
+
+<section class="provider-kpis provider-kpis--dashboard">
+  <div class="provider-kpi">
+    <span>Total pendiente</span>
+    <strong>${{ total_pendiente|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Total pagado</span>
+    <strong>${{ total_pagado|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Facturas pendientes</span>
+    <strong>{{ facturas_pendientes }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Pagos por confirmar</span>
+    <strong>{{ pagos_por_confirmar }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Lotes por confirmar</span>
+    <strong>{{ lotes_por_confirmar }}</strong>
+  </div>
+</section>
+
+<section class="provider-grid">
+  <div class="provider-panel">
+    <div class="provider-panel__head">
+      <h2>Pagos recientes</h2>
+      <a href="{% url 'portal_proveedor_pagos' %}">Ver todos</a>
+    </div>
+    <div class="provider-table-wrap">
+      <table class="provider-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Factura</th>
+            <th class="provider-table__money">Valor</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for pago in pagos_recientes %}
+          <tr>
+            <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+            <td><a href="{% url 'portal_proveedor_factura_detail' pago.factura_id %}">{{ pago.factura.numero_factura }}</a></td>
+            <td class="provider-table__money">${{ pago.valor_pagado|miles }}</td>
+            <td>
+              {% if pago.factura.confirmado_pago %}
+                <span class="provider-badge provider-badge--ok">Confirmado</span>
+              {% else %}
+                <span class="provider-badge provider-badge--warn">Por confirmar</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td class="provider-table__empty" colspan="4">Aun no hay pagos registrados.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="provider-panel">
+    <div class="provider-panel__head">
+      <h2>Resumen por punto de venta</h2>
+    </div>
+    <div class="provider-table-wrap">
+      <table class="provider-table">
+        <thead>
+          <tr>
+            <th>Punto de venta</th>
+            <th>Facturas</th>
+            <th class="provider-table__money">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in resumen_pdv %}
+          <tr>
+            <td>{{ row.punto_venta__nombre }}</td>
+            <td>{{ row.facturas }}</td>
+            <td class="provider-table__money">${{ row.total|miles }}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="provider-table__empty" colspan="3">Sin movimientos para mostrar.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head">
+    <div>
+      <h2>Ultimas notificaciones</h2>
+      <p class="provider-panel__summary">Alertas y mensajes recientes del proceso de pagos.</p>
+    </div>
+    <a href="{% url 'portal_proveedor_notificaciones' %}">Ver todas</a>
+  </div>
+  <div class="provider-list">
+    {% for notif in notificaciones %}
+      <form class="provider-list-form" method="post" action="{% url 'portal_proveedor_notificacion_leer' notif.pk %}">
+        {% csrf_token %}
+        <button class="provider-list__item provider-list__button" type="submit">
+          <span class="provider-list__content">
+            <strong>{{ notif.titulo }}</strong>
+            <span>{{ notif.mensaje }}</span>
+          </span>
+          <span class="provider-badge provider-badge--wait">Abrir</span>
+        </button>
+      </form>
+    {% empty %}
+      <p class="provider-empty">No tienes notificaciones pendientes.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

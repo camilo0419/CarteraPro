@@ -1,0 +1,133 @@
+{% extends "cartera/portal_proveedor/base.html" %}
+{% load formatting %}
+
+{% block title %}Factura {{ factura.numero_factura }}{% endblock %}
+
+{% block content %}
+<section class="provider-pagehead">
+  <div>
+    <h1>Factura {{ factura.numero_factura }}</h1>
+    <p>{{ factura.proveedor.nombre }} / {{ factura.punto_venta.nombre }}</p>
+  </div>
+  <div class="provider-pagehead__actions">
+    {% if factura.confirmado_pago %}
+      <span class="provider-badge provider-badge--ok">Confirmada</span>
+    {% else %}
+      <span class="provider-badge provider-badge--warn">Pendiente de confirmacion</span>
+    {% endif %}
+    <a class="button outline" href="{% url 'portal_proveedor_facturas' %}">Volver</a>
+  </div>
+</section>
+
+<section class="provider-meta-grid">
+  <div class="provider-meta-card">
+    <span>Proveedor</span>
+    <strong>{{ factura.proveedor.nombre }}</strong>
+  </div>
+  <div class="provider-meta-card">
+    <span>Punto de venta</span>
+    <strong>{{ factura.punto_venta.nombre }}</strong>
+  </div>
+  <div class="provider-meta-card">
+    <span>Fecha</span>
+    <strong>{{ factura.fecha_factura|date:"d/m/Y" }}</strong>
+  </div>
+</section>
+
+<section class="provider-kpis">
+  <div class="provider-kpi">
+    <span>Valor factura</span>
+    <strong>${{ factura.valor_factura|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Total pagado</span>
+    <strong>${{ factura.total_pagado|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Saldo</span>
+    <strong>${{ factura.saldo|miles }}</strong>
+  </div>
+  <div class="provider-kpi">
+    <span>Confirmacion</span>
+    <strong>{% if factura.confirmado_pago %}Confirmada{% else %}Pendiente{% endif %}</strong>
+  </div>
+</section>
+
+<section class="provider-panel">
+  <div class="provider-panel__head"><h2>Pagos asociados</h2></div>
+  <div class="provider-table-wrap">
+    <table class="provider-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th class="provider-table__money">Valor</th>
+          <th>Comprobante</th>
+          <th>Confirmacion</th>
+          <th class="provider-table__actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for pago in pagos %}
+        <tr>
+          <td>{{ pago.fecha_pago|date:"d/m/Y" }}</td>
+          <td class="provider-table__money">${{ pago.valor_pagado|miles }}</td>
+          <td>{% if pago.comprobante %}<a class="button outline small" href="{% url 'portal_proveedor_comprobante' pago.pk %}">Ver comprobante</a>{% else %}<span class="muted">No disponible</span>{% endif %}</td>
+          <td>
+            {% if pago.factura.confirmado_pago %}
+              <span class="provider-badge provider-badge--ok">Confirmado</span>
+            {% else %}
+              <span class="provider-badge provider-badge--warn">Por confirmar</span>
+            {% endif %}
+          </td>
+          <td class="actions-inline">
+            {% if not pago.factura.confirmado_pago %}
+              <form method="post" action="{% url 'portal_proveedor_pago_confirmar' pago.pk %}">
+                {% csrf_token %}
+                <button class="button warning small" type="submit">Confirmar</button>
+              </form>
+            {% endif %}
+            <a class="button danger small" href="{% url 'portal_proveedor_pago_novedad' pago.pk %}">Reportar novedad</a>
+            {% if pago.lote_id %}<a class="button outline small" href="{% url 'portal_proveedor_lote_detail' pago.lote_id %}">Ver lote</a>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td class="provider-table__empty" colspan="5">Esta factura aun no tiene pagos registrados.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="provider-grid">
+  <div class="provider-panel">
+    <div class="provider-panel__head"><h2>Novedades</h2></div>
+    <div class="provider-list">
+      {% for evento in novedades %}
+        <div class="provider-list__item">
+          <div class="provider-list__content">
+            <strong>{{ evento.metadata.motivo|default:"Novedad" }}</strong>
+            <span>{{ evento.metadata.detalle }}</span>
+          </div>
+        </div>
+      {% empty %}
+        <p class="provider-empty">No hay novedades registradas.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="provider-panel">
+    <div class="provider-panel__head"><h2>Eventos recientes</h2></div>
+    <div class="provider-list">
+      {% for evento in eventos %}
+        <div class="provider-list__item">
+          <div class="provider-list__content">
+            <strong>{{ evento.get_tipo_display }}</strong>
+            <span>{{ evento.creado_en|date:"d/m/Y H:i" }}</span>
+          </div>
+        </div>
+      {% empty %}
+        <p class="provider-empty">Sin eventos recientes.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
