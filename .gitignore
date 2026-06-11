@@ -10,6 +10,12 @@ backup_db.sqlite3
 # Media local
 media/
 
+# Backups locales
+*.dump
+*.sql
+*.zip
+backup-media/
+
 # Caches Python
 **/__pycache__/
 *.py[cod]
